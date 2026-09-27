@@ -1,0 +1,1015 @@
+openapi: 3.0.3
+
+info:
+  title: College Management System - Library System API
+  description: |
+    Official API specification for the Library System subsystem.
+    Supports books, students, faculty, borrowing, reservations,
+    fines, and finance payment processing for SIA Week 6 integration.
+  version: 1.2.0
+
+servers:
+  - url: http://localhost:5000/api
+    description: Local development server
+
+tags:
+  - name: Books
+    description: Library book management
+  - name: Library Students
+    description: Students registered with the Library subsystem
+  - name: Library Faculty
+    description: Faculty registered with the Library subsystem
+  - name: Registrar
+    description: Registrar subsystem integration
+  - name: Loans
+    description: Book borrowing and returning
+  - name: Reservations
+    description: Book reservations
+  - name: Fines
+    description: Library fines
+  - name: Finance
+    description: Finance payment integration
+
+paths:
+
+  /books:
+    get:
+      tags:
+        - Books
+      summary: Get all books
+      responses:
+        '200':
+          description: List of books
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Book'
+
+    post:
+      tags:
+        - Books
+      summary: Add a new book
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewBookPayload'
+      responses:
+        '201':
+          description: Book created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /books/{bookId}:
+    get:
+      tags:
+        - Books
+      summary: Get a book by ID
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      responses:
+        '200':
+          description: Book found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Books
+      summary: Update a book
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Book'
+      responses:
+        '200':
+          description: Book updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Books
+      summary: Delete a book
+      parameters:
+        - $ref: '#/components/parameters/BookId'
+      responses:
+        '200':
+          description: Book deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /library/students:
+    get:
+      tags:
+        - Library Students
+      summary: Get all library students
+      responses:
+        '200':
+          description: List of library students
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LibraryStudent'
+
+  /library/students/{studentId}:
+    get:
+      tags:
+        - Library Students
+      summary: Get library student by ID
+      parameters:
+        - $ref: '#/components/parameters/StudentId'
+      responses:
+        '200':
+          description: Library student found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryStudent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /library/faculty:
+    get:
+      tags:
+        - Library Faculty
+      summary: Get all library faculty
+      responses:
+        '200':
+          description: List of faculty
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FacultyMember'
+
+  /library/faculty/{facultyId}:
+    get:
+      tags:
+        - Library Faculty
+      summary: Get faculty member by ID
+      parameters:
+        - $ref: '#/components/parameters/FacultyId'
+      responses:
+        '200':
+          description: Faculty member found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FacultyMember'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /registrar/students:
+    get:
+      tags:
+        - Registrar
+      summary: Get students from Registrar subsystem
+      parameters:
+        - in: query
+          name: department
+          schema:
+            type: string
+        - in: query
+          name: program
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            example: ENROLLED
+      responses:
+        '200':
+          description: Students returned by Registrar
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EnrolledStudent'
+
+  /registrar/students/{studentId}:
+    get:
+      tags:
+        - Registrar
+      summary: Get Registrar student by ID
+      parameters:
+        - $ref: '#/components/parameters/StudentId'
+      responses:
+        '200':
+          description: Registrar student found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnrolledStudent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /loans:
+    get:
+      tags:
+        - Loans
+      summary: Get loans
+      parameters:
+        - in: query
+          name: borrowerType
+          schema:
+            $ref: '#/components/schemas/BorrowerType'
+        - in: query
+          name: borrowerId
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of loans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Loan'
+
+    post:
+      tags:
+        - Loans
+      summary: Create a loan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewLoanPayload'
+      responses:
+        '201':
+          description: Loan created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Loan'
+        '404':
+          description: Book not found
+        '409':
+          description: Book unavailable
+
+  /loans/{loanId}:
+    get:
+      tags:
+        - Loans
+      summary: Get loan by ID
+      parameters:
+        - $ref: '#/components/parameters/LoanId'
+      responses:
+        '200':
+          description: Loan found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Loan'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Loans
+      summary: Update loan / return book
+      parameters:
+        - $ref: '#/components/parameters/LoanId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoanUpdatePayload'
+      responses:
+        '200':
+          description: Loan updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Loan'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Loans
+      summary: Delete loan
+      parameters:
+        - $ref: '#/components/parameters/LoanId'
+      responses:
+        '200':
+          description: Loan deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /reservations:
+    get:
+      tags:
+        - Reservations
+      summary: Get reservations
+      parameters:
+        - in: query
+          name: borrowerType
+          schema:
+            $ref: '#/components/schemas/BorrowerType'
+        - in: query
+          name: borrowerId
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of reservations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Reservation'
+
+    post:
+      tags:
+        - Reservations
+      summary: Create a reservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewReservationPayload'
+      responses:
+        '201':
+          description: Reservation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '404':
+          description: Book not found
+
+  /reservations/{reservationId}:
+    get:
+      tags:
+        - Reservations
+      summary: Get reservation by ID
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+      responses:
+        '200':
+          description: Reservation found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Reservations
+      summary: Delete reservation
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+      responses:
+        '200':
+          description: Reservation deleted
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /fines:
+    get:
+      tags:
+        - Fines
+      summary: Get fines
+      parameters:
+        - in: query
+          name: borrowerType
+          schema:
+            $ref: '#/components/schemas/BorrowerType'
+        - in: query
+          name: borrowerId
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            $ref: '#/components/schemas/FineStatus'
+      responses:
+        '200':
+          description: List of fines
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Fine'
+
+    post:
+      tags:
+        - Fines
+      summary: Create a fine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewFinePayload'
+      responses:
+        '201':
+          description: Fine created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Fine'
+        '404':
+          description: Loan not found
+
+  /fines/{fineId}:
+    get:
+      tags:
+        - Fines
+      summary: Get fine by ID
+      parameters:
+        - $ref: '#/components/parameters/FineId'
+      responses:
+        '200':
+          description: Fine found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Fine'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Fines
+      summary: Update fine status
+      parameters:
+        - $ref: '#/components/parameters/FineId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FineUpdatePayload'
+      responses:
+        '200':
+          description: Fine updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Fine'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /finance/payments:
+    get:
+      tags:
+        - Finance
+      summary: Get finance payments
+      parameters:
+        - in: query
+          name: fineId
+          schema:
+            type: string
+        - in: query
+          name: borrowerId
+          schema:
+            type: string
+        - in: query
+          name: borrowerType
+          schema:
+            $ref: '#/components/schemas/BorrowerType'
+      responses:
+        '200':
+          description: List of payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FinancePayment'
+
+    post:
+      tags:
+        - Finance
+      summary: Process a fine payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewFinancePaymentPayload'
+      responses:
+        '201':
+          description: Payment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancePayment'
+        '404':
+          description: Fine not found
+        '409':
+          description: Fine already paid
+
+  /finance/payments/{paymentId}:
+    get:
+      tags:
+        - Finance
+      summary: Get payment by ID
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      responses:
+        '200':
+          description: Payment found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinancePayment'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+
+  parameters:
+
+    BookId:
+      in: path
+      name: bookId
+      required: true
+      schema:
+        type: string
+      example: BK-1001
+
+    StudentId:
+      in: path
+      name: studentId
+      required: true
+      schema:
+        type: string
+      example: "202610897"
+
+    FacultyId:
+      in: path
+      name: facultyId
+      required: true
+      schema:
+        type: string
+      example: FAC-1001
+
+    LoanId:
+      in: path
+      name: loanId
+      required: true
+      schema:
+        type: string
+      example: LN-5001
+
+    ReservationId:
+      in: path
+      name: reservationId
+      required: true
+      schema:
+        type: string
+      example: RS-3001
+
+    FineId:
+      in: path
+      name: fineId
+      required: true
+      schema:
+        type: string
+      example: FN-2001
+
+    PaymentId:
+      in: path
+      name: paymentId
+      required: true
+      schema:
+        type: string
+      example: PAY-3001
+
+  schemas:
+
+    BorrowerType:
+      type: string
+      enum:
+        - STUDENT
+        - FACULTY
+
+    FineStatus:
+      type: string
+      enum:
+        - UNPAID
+        - PAID
+        - WAIVED
+
+    PaymentMethod:
+      type: string
+      enum:
+        - CASH
+        - GCASH
+        - BANK_TRANSFER
+
+    Book:
+      type: object
+      required:
+        - bookId
+        - title
+        - author
+        - quantity
+      properties:
+        bookId:
+          type: string
+          example: BK-1001
+        isbn:
+          type: string
+          example: "9780131103627"
+        title:
+          type: string
+          example: Introduction to Programming
+        author:
+          type: string
+          example: John Smith
+        category:
+          type: string
+          example: Programming
+        publisher:
+          type: string
+          example: Pearson
+        publicationYear:
+          type: integer
+          example: 2024
+        quantity:
+          type: integer
+          example: 10
+        availableQuantity:
+          type: integer
+          example: 8
+        status:
+          type: string
+          enum:
+            - AVAILABLE
+            - UNAVAILABLE
+
+    NewBookPayload:
+      type: object
+      required:
+        - title
+        - author
+        - quantity
+      properties:
+        title:
+          type: string
+        author:
+          type: string
+        isbn:
+          type: string
+        category:
+          type: string
+        publisher:
+          type: string
+        publicationYear:
+          type: integer
+        quantity:
+          type: integer
+
+    LibraryStudent:
+      type: object
+      required:
+        - studentId
+        - name
+        - libraryStatus
+      properties:
+        studentId:
+          type: string
+        name:
+          type: string
+        program:
+          type: string
+        yearLevel:
+          type: string
+        libraryStatus:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - BLOCKED
+
+    FacultyMember:
+      type: object
+      required:
+        - facultyId
+        - name
+        - department
+        - libraryStatus
+      properties:
+        facultyId:
+          type: string
+        name:
+          type: string
+        department:
+          type: string
+        email:
+          type: string
+        libraryStatus:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+            - BLOCKED
+
+    EnrolledStudent:
+      type: object
+      required:
+        - studentId
+        - name
+        - departmentOrProgram
+        - status
+      properties:
+        studentId:
+          type: string
+        name:
+          type: string
+        departmentOrProgram:
+          type: string
+        status:
+          type: string
+        email:
+          type: string
+        yearLevel:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    Loan:
+      type: object
+      required:
+        - loanId
+        - borrowerId
+        - borrowerType
+        - bookId
+        - borrowedDate
+        - dueDate
+        - status
+      properties:
+        loanId:
+          type: string
+        borrowerId:
+          type: string
+        borrowerType:
+          $ref: '#/components/schemas/BorrowerType'
+        bookId:
+          type: string
+        borrowedDate:
+          type: string
+          format: date
+        dueDate:
+          type: string
+          format: date
+        returnedDate:
+          type: string
+          format: date
+          nullable: true
+        status:
+          type: string
+          enum:
+            - BORROWED
+            - RETURNED
+            - OVERDUE
+
+    NewLoanPayload:
+      type: object
+      required:
+        - borrowerId
+        - borrowerType
+        - bookId
+      properties:
+        borrowerId:
+          type: string
+        borrowerType:
+          $ref: '#/components/schemas/BorrowerType'
+        bookId:
+          type: string
+
+    LoanUpdatePayload:
+      type: object
+      required:
+        - returnedDate
+        - status
+      properties:
+        returnedDate:
+          type: string
+          format: date
+        status:
+          type: string
+          enum:
+            - BORROWED
+            - RETURNED
+            - OVERDUE
+
+    Reservation:
+      type: object
+      required:
+        - reservationId
+        - borrowerId
+        - borrowerType
+        - bookId
+        - reservationDate
+        - status
+      properties:
+        reservationId:
+          type: string
+        borrowerId:
+          type: string
+        borrowerType:
+          $ref: '#/components/schemas/BorrowerType'
+        bookId:
+          type: string
+        reservationDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - PENDING
+            - FULFILLED
+            - CANCELLED
+
+    NewReservationPayload:
+      type: object
+      required:
+        - borrowerId
+        - borrowerType
+        - bookId
+      properties:
+        borrowerId:
+          type: string
+        borrowerType:
+          $ref: '#/components/schemas/BorrowerType'
+        bookId:
+          type: string
+
+    Fine:
+      type: object
+      required:
+        - fineId
+        - borrowerId
+        - borrowerType
+        - amount
+        - reason
+        - status
+      properties:
+        fineId:
+          type: string
+        borrowerId:
+          type: string
+        borrowerType:
+          $ref: '#/components/schemas/BorrowerType'
+        loanId:
+          type: string
+          nullable: true
+        amount:
+          type: number
+          format: float
+        reason:
+          type: string
+        status:
+          $ref: '#/components/schemas/FineStatus'
+
+    NewFinePayload:
+      type: object
+      required:
+        - borrowerId
+        - borrowerType
+        - amount
+        - reason
+      properties:
+        borrowerId:
+          type: string
+        borrowerType:
+          $ref: '#/components/schemas/BorrowerType'
+        loanId:
+          type: string
+        amount:
+          type: number
+          format: float
+        reason:
+          type: string
+
+    FineUpdatePayload:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/FineStatus'
+
+    FinancePayment:
+      type: object
+      required:
+        - paymentId
+        - fineId
+        - borrowerId
+        - borrowerType
+        - amount
+        - paymentMethod
+        - paidDate
+        - status
+      properties:
+        paymentId:
+          type: string
+        fineId:
+          type: string
+        borrowerId:
+          type: string
+        borrowerType:
+          $ref: '#/components/schemas/BorrowerType'
+        amount:
+          type: number
+          format: float
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        paymentReference:
+          type: string
+        paidDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - PAID
+            - REFUNDED
+
+    NewFinancePaymentPayload:
+      type: object
+      required:
+        - fineId
+        - borrowerId
+        - borrowerType
+        - amount
+        - paymentMethod
+      properties:
+        fineId:
+          type: string
+        borrowerId:
+          type: string
+        borrowerType:
+          $ref: '#/components/schemas/BorrowerType'
+        amount:
+          type: number
+          format: float
+        paymentMethod:
+          $ref: '#/components/schemas/PaymentMethod'
+        paymentReference:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        statusCode:
+          type: integer
+        error:
+          type: string
+        message:
+          type: string
+
+  responses:
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
