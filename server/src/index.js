@@ -3,6 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 
 const pool = require("./config/database");
+const bookRoutes = require("./routes/books.routes");
 
 const app = express();
 
@@ -14,6 +15,8 @@ app.get("/", (req, res) => {
         message: "Library Management System API is running"
     });
 });
+
+app.use("/api/books", bookRoutes);
 
 const PORT = process.env.PORT || 5000;
 
