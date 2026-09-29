@@ -44,6 +44,10 @@ app.use("/api/fines", fineRoutes);
 app.use("/api/finance/payments", financePaymentRoutes);
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
 
+app.get("/api/v1/health", (req, res) => {
+    res.json({ status: "ok" });
+});
+
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
