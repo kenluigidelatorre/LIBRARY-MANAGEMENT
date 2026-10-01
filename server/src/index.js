@@ -34,14 +34,14 @@ app.get("/", (req, res) => {
     });
 });
 
-app.use("/api/books", bookRoutes);
-app.use("/api/library/students", libraryStudentRoutes);
-app.use("/api/library/faculty", libraryFacultyRoutes);
-app.use("/api/registrar", registrarRoutes);
-app.use("/api/loans", loanRoutes);
-app.use("/api/reservations", reservationRoutes);
-app.use("/api/fines", fineRoutes);
-app.use("/api/finance/payments", financePaymentRoutes);
+app.use("/api/v1/books", bookRoutes);
+app.use("/api/v1/library/students", libraryStudentRoutes);
+app.use("/api/v1/library/faculty", libraryFacultyRoutes);
+app.use("/api/v1/registrar", registrarRoutes);
+app.use("/api/v1/loans", loanRoutes);
+app.use("/api/v1/reservations", reservationRoutes);
+app.use("/api/v1/fines", fineRoutes);
+app.use("/api/v1/finance/payments", financePaymentRoutes);
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
 
 app.get("/api/v1/health", (req, res) => {
