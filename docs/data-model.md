@@ -24,36 +24,23 @@ The schema also defines primary keys, foreign keys, check constraints, and index
 
 ## 2. Entity Relationship Overview
 
-The main relationships are:
+The main database relationships are:
 
 ```text
-                    ┌──────────────────┐
-                    │      books       │
-                    │──────────────────│
-                    │ book_id (PK)     │
-                    └────────┬─────────┘
-                             │
-                    ┌────────┴─────────┐
-                    │                  │
-                    ▼                  ▼
-              ┌───────────┐      ┌──────────────┐
-              │   loans   │      │ reservations │
-              └─────┬─────┘      └──────────────┘
-                    │
-                    ▼
-               ┌─────────┐
-               │  fines  │
-               └────┬────┘
-                    │
-                    ▼
-          ┌──────────────────┐
-          │ finance_payments │
-          └──────────────────┘
+books
+  |
+  +---- loans
+  |       |
+  |       +---- fines
+  |               |
+  |               +---- finance_payments
+  |
+  +---- reservations
 
 library_students
-       │
-       └── referenced logically by borrower_id + borrower_type
+  |
+  +---- logically referenced by borrower_id + borrower_type
 
 library_faculty
-       │
-       └── referenced logically by borrower_id + borrower_type
+  |
+  +---- logically referenced by borrower_id + borrower_type
