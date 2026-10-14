@@ -1,14 +1,37 @@
-# College Management System - Library Module
+# College Management System — Library Management Module
 
-The Library Management System is a module of the College Management System. It provides REST API endpoints for managing books, library students, faculty, loans, reservations, fines, finance payments, and Registrar-related data.
+The Library Management Module is a subsystem of the College Management System (CMS). It provides REST API endpoints for managing books, library students, faculty, loans, reservations, fines, finance payments, and Registrar-related data.
+
+## Team Members
+
+- **Ashly Jana Quising** — Frontend
+- **Ken Luigi Dela Torre** — Backend
+- **Luieme Etcobanes** — Documentation
+
+## Project Links
+
+- **GitHub Repository:** https://github.com/kenluigidelatorre/LIBRARY-MANAGEMENT.git
+- **Figma Prototype:** https://www.figma.com/design/WZ9KzDGJjEfuc3BAhKxhdZ/Project-SIA
+
+## Features
+
+- **Books:** Manage book records.
+- **Library Students:** Retrieve student records maintained by the Library module.
+- **Library Faculty:** Retrieve faculty records maintained by the Library module.
+- **Registrar Integration:** Provide endpoints for retrieving student information for verification.
+- **Loans:** Manage book borrowing records.
+- **Reservations:** Manage book reservations.
+- **Fines:** Record and manage library fines.
+- **Finance Payments:** Provide endpoints for fine-payment records.
 
 ## Technology Stack
 
 - **Runtime:** Node.js
 - **Backend framework:** Express.js
 - **Database:** PostgreSQL
-- **API documentation:** OpenAPI and Swagger UI
 - **Database driver:** `pg`
+- **API specification:** OpenAPI
+- **API documentation:** Swagger UI
 
 ## Project Structure
 
@@ -137,7 +160,7 @@ Once the server starts successfully, open these URLs in your browser:
 | Health endpoint | http://localhost:5000/api/v1/health | Returns the API health status |
 | Swagger UI | http://localhost:5000/docs | Interactive API documentation |
 
-The health endpoint reports the API status. Successful database connectivity is also required during server startup.
+Successful database connectivity is also required during server startup.
 
 ## API Route Overview
 
@@ -158,11 +181,19 @@ For available HTTP methods, request parameters, and response formats, consult th
 
 ## Documentation
 
-Additional project documentation is maintained in the `docs/` directory. It includes architecture, data model, design system, agreements, and architecture decisions. Some documentation may be maintained on separate team branches.
+Additional project documentation is maintained in the `docs/` directory. It includes architecture, data model, design system, agreements, and architecture decisions.
 
-## Notes
+Other useful files include:
 
-- The backend uses PostgreSQL. Configure the database before starting the API.
-- The SQL schema initializes tables; it does not create the database itself.
+- API specification: `server/openapi.yaml`
+- Database schema: `server/database/library_schema.sql`
+- Backend setup instructions: `server/README.md`
+
+## Security and Notes
+
 - Do not commit local `.env` files or credentials.
-- The client directory is included in the repository, but follow its own README and verified setup instructions before attempting to run a frontend.
+- Keep database passwords and other secrets private.
+- Use `.env.example` to document required environment variables.
+- The SQL schema initializes tables; it does not create the database itself.
+- The client directory is included in the repository, but follow its own README and verified setup instructions before attempting to run the frontend.
+- Refer to the actual implementation and test results before marking endpoints or external integrations as completed. An endpoint listed in the OpenAPI specification is not necessarily fully implemented or tested.
