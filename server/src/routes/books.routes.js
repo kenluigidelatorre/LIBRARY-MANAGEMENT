@@ -49,13 +49,11 @@ router.post("/", async (req, res) => {
 
         res.status(201).json(book);
     } catch (error) {
-        console.error(error);
-
-        res.status(500).json({
-            statusCode: 500,
-            error: "Internal Server Error",
-            message: "Failed to create book"
-        });
+        if (["INVALID_BOOK_INPUT", "INVALID_BOOK_QUANTITY", "INVALID_BOOK_AVAILABILITY", "INVALID_PUBLICATION_YEAR"].includes(error.message)) {
+            return res.status(400).json({ statusCode: 400, error: "Bad Request", message: "Provide valid book details, quantities, and publication year" });
+        }
+        console.error("Book creation error:", error.message);
+        res.status(500).json({ statusCode: 500, error: "Internal Server Error", message: "Failed to create book" });
     }
 });
 
@@ -76,13 +74,11 @@ router.put("/:bookId", async (req, res) => {
 
         res.status(200).json(book);
     } catch (error) {
-        console.error(error);
-
-        res.status(500).json({
-            statusCode: 500,
-            error: "Internal Server Error",
-            message: "Failed to update book"
-        });
+        if (["INVALID_BOOK_INPUT", "INVALID_BOOK_QUANTITY", "INVALID_BOOK_AVAILABILITY", "INVALID_PUBLICATION_YEAR"].includes(error.message)) {
+            return res.status(400).json({ statusCode: 400, error: "Bad Request", message: "Provide valid book details, quantities, and publication year" });
+        }
+        console.error("Book update error:", error.message);
+        res.status(500).json({ statusCode: 500, error: "Internal Server Error", message: "Failed to update book" });
     }
 });
 

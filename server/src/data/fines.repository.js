@@ -122,10 +122,14 @@ const createFine = async (fine) => {
 };
 
 const updateFine = async (fineId, fine) => {
+    if (!fine || !["UNPAID", "WAIVED"].includes(String(fine.status || "").toUpperCase())) {
+        throw new Error("INVALID_FINE_STATUS");
+    }
+
     const result = await pool.query(`
         UPDATE fines
         SET status = $1
-        WHERE fine_id = $2
+        WHERE fine_id = $2 AND status <> 'PAID'
         RETURNING
             fine_id AS "fineId",
             borrower_id AS "borrowerId",
@@ -134,10 +138,7 @@ const updateFine = async (fineId, fine) => {
             amount,
             reason,
             status
-    `, [
-        fine.status,
-        fineId
-    ]);
+    `, [String(fine.status).toUpperCase(), fineId]);
 
     return result.rows[0];
 };
