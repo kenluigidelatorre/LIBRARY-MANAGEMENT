@@ -84,7 +84,6 @@ app.use(
     swaggerUi.setup(openapiDocument)
 );
 
-<<<<<<< HEAD
 // API routes
 app.use("/api/books", bookRoutes);
 app.use("/api/library/faculty", libraryFacultyRoutes);
@@ -97,7 +96,6 @@ app.use("/api/library/students", libraryStudentsRoutes);
 
 // 404 handler - must be after all routes
 app.use(notFound);
-=======
 app.use("/api/v1/books", bookRoutes);
 app.use("/api/v1/library/students", libraryStudentRoutes);
 app.use("/api/v1/library/faculty", libraryFacultyRoutes);
@@ -113,7 +111,7 @@ app.get("/api/v1/health", (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
->>>>>>> 3bd618bc0d27c7bd7fdf7449ac055938325640da
+
 
 // Global error handler - must be last
 app.use(errorHandler);
