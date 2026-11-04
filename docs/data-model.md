@@ -167,3 +167,31 @@ The API specification is maintained in `server/openapi.yaml`.
 The API documentation and database schema should remain consistent regarding identifiers, fields, data types, and validation rules. API response properties may use different naming conventions from database columns when the backend maps between them.
 
 For example, the books API may expose camelCase properties such as `bookId`, `publicationYear`, and `availableQuantity`, while the database uses snake_case column names.
+=======
+The schema also defines primary keys, foreign keys, check constraints, and indexes to maintain data integrity and improve query performance.
+
+---
+
+## 2. Entity Relationship Overview
+
+The main database relationships are:
+
+```text
+books
+  |
+  +---- loans
+  |       |
+  |       +---- fines
+  |               |
+  |               +---- finance_payments
+  |
+  +---- reservations
+
+library_students
+  |
+  +---- logically referenced by borrower_id + borrower_type
+
+library_faculty
+  |
+  +---- logically referenced by borrower_id + borrower_type
+
