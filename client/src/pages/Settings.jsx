@@ -43,14 +43,7 @@ export default function Settings() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
-          <a
-            href="/CMD-Library-MS-Frontend.zip"
-            download="CMD-Library-MS-Frontend.zip"
-            className="btn-primary no-underline"
-          >
-            <Download size={15} />
-            <span>Download ZIP</span>
-          </a>
+
           <button type="button" onClick={resetSampleData} className="btn-secondary">
             <RotateCcw size={15} />
             <span>Reset Sample Data</span>
