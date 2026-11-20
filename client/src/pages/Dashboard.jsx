@@ -1,52 +1,251 @@
-import { useEffect, useState } from "react";
-import { BookOpen, Users, GraduationCap, Repeat2, CalendarDays, AlertTriangle, ArrowUpRight, Clock3 } from "lucide-react";
-import PageHeader from "../components/PageHeader";
-import Status from "../components/Status";
-import { Loading, ErrorState, Empty } from "../components/States";
-import { booksApi, studentsApi, facultyApi, loansApi, reservationsApi, finesApi } from "../api/services";
-import { date, money } from "../utils/format";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  BookOpen,
+  Users,
+  GraduationCap,
+  ArrowLeftRight,
+  AlertTriangle,
+  CalendarClock,
+  CheckCircle,
+  Eye,
+} from 'lucide-react';
+import { useLibrary } from '../context/LibraryContext';
+import StatCard from '../components/common/StatCard';
+import StatusBadge from '../components/common/StatusBadge';
+import AnalyticsChart from '../components/dashboard/AnalyticsChart';
 
 export default function Dashboard() {
-  const [data, setData] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const load = async () => {
-    setLoading(true); setError("");
-    try {
-      const [books, students, faculty, loans, reservations, fines] = await Promise.all([
-        booksApi.list(), studentsApi.list(), facultyApi.list(), loansApi.list(), reservationsApi.list(), finesApi.list()
-      ]);
-      setData({ books, students, faculty, loans, reservations, fines });
-    } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => { load(); }, []);
-  if (loading) return <><PageHeader title="Dashboard" description="A live overview of your library operations."/><Loading label="Loading dashboard data..."/></>;
-  if (error) return <><PageHeader title="Dashboard" description="A live overview of your library operations."/><ErrorState message={error} onRetry={load}/></>;
-  const { books = [], students = [], faculty = [], loans = [], reservations = [], fines = [] } = data;
-  const activeLoans = loans.filter(x => String(x.status).toUpperCase() !== "RETURNED");
-  const overdue = activeLoans.filter(x => x.dueDate && new Date(x.dueDate) < new Date());
-  const stats = [
-    { label: "Total books", value: books.length, note: `${books.reduce((n,b)=>n+Number(b.availableQuantity||0),0)} available copies`, icon: BookOpen, tone: "green" },
-    { label: "Library students", value: students.length, note: "Registered students", icon: Users, tone: "blue" },
-    { label: "Faculty members", value: faculty.length, note: "Registered faculty", icon: GraduationCap, tone: "purple" },
-    { label: "Active loans", value: activeLoans.length, note: "Currently borrowed", icon: Repeat2, tone: "orange" }
-  ];
-  const recent = [...loans].sort((a,b)=>new Date(b.borrowedDate)-new Date(a.borrowedDate)).slice(0,6);
-  return <>
-    <PageHeader title="Dashboard" description="A live overview of your library operations." action={<span className="live-pill"><span className="online-dot"/> Live API data</span>}/>
-    <div className="welcome-banner"><div><span className="banner-kicker">LIBRARY OVERVIEW</span><h2>Your library, at a glance.</h2><p>Monitor collections, borrowing activity, reservations, and overdue records.</p></div><div className="banner-art"><BookOpen size={74}/><span/><i/></div></div>
-    <div className="stats-grid">{stats.map(s=>{const Icon=s.icon;return <div className="stat-card" key={s.label}><div className={`stat-icon ${s.tone}`}><Icon size={20}/></div><div className="stat-label">{s.label}</div><div className="stat-value">{s.value.toLocaleString()}</div><div className="stat-note">{s.note}</div></div>})}</div>
-    <div className="dashboard-grid">
-      <section className="panel panel-large"><div className="panel-heading"><div><h3>Recent borrowing activity</h3><p>Latest loan records from the database</p></div><span className="subtle-link">Latest records <ArrowUpRight size={14}/></span></div>
-        {recent.length ? <div className="activity-list">{recent.map((loan,i)=><div className="activity-row" key={loan.loanId||i}><div className="activity-book"><BookOpen size={18}/></div><div className="activity-main"><strong>{loan.bookId || "Book record"}</strong><span>{loan.borrowerType} · {loan.borrowerId}</span></div><div className="activity-date">{date(loan.borrowedDate)}</div><Status value={loan.status}/></div>)}</div> : <Empty title="No borrowing activity yet"/>}
+  const {
+    books,
+    students,
+    faculty,
+    borrowings,
+    returns,
+    reservations,
+    processReturn,
+  } = useLibrary();
+  const navigate = useNavigate();
+  const [activityFilter, setActivityFilter] = useState('All');
+
+  const totalBookCopies = books.reduce((sum, b) => sum + Number(b.copies || 0), 0);
+  const activeBorrowed = borrowings.filter((b) => b.status === 'Borrowed').length;
+  const overdueCount = borrowings.filter((b) => b.status === 'Overdue').length;
+  const pendingReservations = reservations.filter((r) => r.status === 'Pending').length;
+
+  const filteredActivity = borrowings
+    .filter((b) => (activityFilter === 'All' ? true : b.status === activityFilter))
+    .slice(0, 7);
+
+  return (
+    <div className="space-y-6">
+      {/* Hero Banner matching Figma Image 1 */}
+      <section className="hero-banner">
+        <img
+          src="/src/assets/images/library.jpg"
+          alt="CMD Campus Library Building"
+          referrerPolicy="no-referrer"
+          className="hero-banner-img"
+        />
+        <div className="relative z-10 px-7 py-6 max-w-[600px]">
+          <p className="text-[11.5px] font-semibold uppercase tracking-[0.12em] text-[#A7F3D0]">
+            Welcome to
+          </p>
+          <h1
+            style={{ color: '#ffffff' }}
+            className="text-[22px] sm:text-[26px] font-extrabold !text-white leading-tight mt-1 drop-shadow-md"
+          >
+            LIBRARY MANAGEMENT SYSTEM
+          </h1>
+          <p className="text-[13.5px] text-[#D1FAE5]/90 mt-2 leading-relaxed max-w-[490px]">
+            Manage books, student &amp; faculty records, borrowing circulation, returns,
+            reservations, and library analytics in one unified workspace.
+          </p>
+        </div>
       </section>
-      <section className="panel"><div className="panel-heading"><div><h3>Attention needed</h3><p>Items requiring follow-up</p></div><AlertTriangle size={18} className="muted-icon"/></div>
-        <div className="attention-item"><div className="attention-icon red"><Clock3 size={18}/></div><div><strong>{overdue.length} overdue loans</strong><span>Past their due date</span></div></div>
-        <div className="attention-item"><div className="attention-icon amber"><CalendarDays size={18}/></div><div><strong>{reservations.filter(x=>String(x.status).toUpperCase()==="PENDING").length} pending reservations</strong><span>Awaiting action</span></div></div>
-        <div className="attention-item"><div className="attention-icon green"><AlertTriangle size={18}/></div><div><strong>{fines.filter(x=>String(x.status).toUpperCase()!=="PAID").length} unpaid fines</strong><span>{money(fines.filter(x=>String(x.status).toUpperCase()!=="PAID").reduce((n,f)=>n+Number(f.amount||0),0))} outstanding</span></div></div>
+
+      {/* Dashboard Title */}
+      <div className="page-header-row">
+        <div>
+          <h2 className="page-title">Dashboard</h2>
+          <p className="page-subtitle">
+            Overview of library catalog, active circulation, and member statistics
+          </p>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => navigate('/books')}
+            className="btn-secondary"
+          >
+            <BookOpen size={16} />
+            <span>View Catalog</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/borrowing')}
+            className="btn-primary"
+          >
+            <ArrowLeftRight size={16} />
+            <span>Issue Book</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 6 Stat Cards Grid (3x2 matching Figma) */}
+      <div className="stat-grid-6">
+        <StatCard
+          icon={BookOpen}
+          label="Total Books in Catalog"
+          value={totalBookCopies}
+          subtext={`${books.length} titles`}
+          tone="green"
+          onClick={() => navigate('/books')}
+        />
+        <StatCard
+          icon={Users}
+          label="Registered Students"
+          value={students.length}
+          subtext={`${students.filter((s) => s.status === 'Active').length} active`}
+          tone="blue"
+          onClick={() => navigate('/students')}
+        />
+        <StatCard
+          icon={GraduationCap}
+          label="Faculty Members"
+          value={faculty.length}
+          subtext={`${faculty.filter((f) => f.status === 'Active').length} active`}
+          tone="green"
+          onClick={() => navigate('/faculty')}
+        />
+        <StatCard
+          icon={ArrowLeftRight}
+          label="Currently Borrowed"
+          value={activeBorrowed}
+          tone="amber"
+          onClick={() => navigate('/borrowing')}
+        />
+        <StatCard
+          icon={AlertTriangle}
+          label="Overdue Books"
+          value={overdueCount}
+          tone="red"
+          onClick={() => navigate('/borrowing')}
+        />
+        <StatCard
+          icon={CalendarClock}
+          label="Pending Reservations"
+          value={pendingReservations}
+          tone="green"
+          onClick={() => navigate('/reservations')}
+        />
+      </div>
+
+      {/* Recent Borrowing Activity Table */}
+      <section className="cmd-card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
+          <div>
+            <h2 className="text-[17px] font-bold text-[#111827]">
+              Recent Borrowing Activity
+            </h2>
+            <p className="text-[12.5px] text-[#6B7280] mt-0.5">
+              Latest book checkouts, due dates, and return statuses
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 bg-[#F3F6F4] p-1 rounded-lg">
+            {['All', 'Borrowed', 'Overdue', 'Returned'].map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActivityFilter(tab)}
+                className={`px-3 py-1 rounded-md text-[12px] font-semibold transition-colors whitespace-nowrap ${
+                  activityFilter === tab
+                    ? 'bg-white text-[#111827] shadow-xs'
+                    : 'text-[#6B7280] hover:text-[#111827]'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="table-scroll">
+          <table className="cmd-table">
+            <thead>
+              <tr>
+                <th>Borrow ID</th>
+                <th>Book Title</th>
+                <th>Borrower</th>
+                <th>Role</th>
+                <th>Borrow Date</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th className="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredActivity.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-8 text-[#6B7280]">
+                    No borrowing activity matching this filter.
+                  </td>
+                </tr>
+              ) : (
+                filteredActivity.map((item) => (
+                  <tr key={item.id}>
+                    <td className="font-mono-data text-[12.5px] font-semibold text-[#374151]">
+                      {item.id}
+                    </td>
+                    <td className="font-semibold text-[#111827] max-w-[230px] truncate">
+                      {item.bookTitle}
+                    </td>
+                    <td>{item.borrowerName}</td>
+                    <td className="text-[#4B5563]">{item.role}</td>
+                    <td className="tabular-nums text-[#4B5563]">{item.borrowDate}</td>
+                    <td className="tabular-nums text-[#4B5563]">{item.dueDate}</td>
+                    <td>
+                      <StatusBadge status={item.status} />
+                    </td>
+                    <td className="text-right">
+                      <div className="inline-flex items-center justify-end gap-1.5">
+                        {item.status !== 'Returned' && (
+                          <button
+                            type="button"
+                            title="Quick Return"
+                            onClick={() =>
+                              processReturn({
+                                borrowId: item.id,
+                                returnDate: new Date().toISOString().slice(0, 10),
+                                condition: 'Good',
+                              })
+                            }
+                            className="p-1.5 rounded-md text-[#158F50] hover:bg-[#E7F6EE]"
+                          >
+                            <CheckCircle size={16} />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          title="View in Borrowing"
+                          onClick={() => navigate('/borrowing')}
+                          className="p-1.5 rounded-md text-[#6B7280] hover:bg-[#F3F6F4] hover:text-[#111827]"
+                        >
+                          <Eye size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </section>
+
+      {/* Reports & Analytics Grouped Bar Chart */}
+      <AnalyticsChart books={books} borrowings={borrowings} returns={returns} />
     </div>
-    <div className="panel"><div className="panel-heading"><div><h3>Collection snapshot</h3><p>Availability across your book collection</p></div></div><div className="collection-grid"><div><span>Total titles</span><strong>{books.length}</strong></div><div><span>Total copies</span><strong>{books.reduce((n,b)=>n+Number(b.quantity||0),0)}</strong></div><div><span>Available copies</span><strong>{books.reduce((n,b)=>n+Number(b.availableQuantity||0),0)}</strong></div><div><span>Reservations</span><strong>{reservations.length}</strong></div></div></div>
-  </>;
+  );
 }
