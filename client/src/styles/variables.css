@@ -1,0 +1,62 @@
+:root {
+  /* Brand & Forest Emerald Palette (Matched to CMD Library MS Figma Design) */
+  --color-sidebar-top: #062113;
+  --color-sidebar-mid: #0c3b22;
+  --color-sidebar-bottom: #051c10;
+  --color-sidebar-active: #168a4e;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.08);
+  --color-sidebar-text: #d7e8de;
+  --color-sidebar-text-muted: #98b8a6;
+
+  /* Primary Actions */
+  --color-primary: #158f50;
+  --color-primary-hover: #107641;
+  --color-primary-light: #e7f6ee;
+  --color-primary-ring: rgba(21, 143, 80, 0.22);
+
+  /* Surface & Canvas */
+  --color-bg-canvas: #f3f6f4;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f6f8f7;
+  --color-surface-hover: #f0f5f2;
+  --color-border: #e1e7e3;
+  --color-border-strong: #cdd7d1;
+
+  /* Typography Colors */
+  --color-text-primary: #111827;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #6b7280;
+
+  /* Semantic Status Colors */
+  --color-success: #15803d;
+  --color-success-bg: #dcfce7;
+  --color-warning: #b45309;
+  --color-warning-bg: #fef3c7;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fee2e2;
+  --color-info: #1d4ed8;
+  --color-info-bg: #dbeafe;
+
+  /* Chart Series Colors */
+  --color-chart-borrowed: #ef4444;
+  --color-chart-returned: #158f50;
+  --color-chart-overdue: #6ee7b7;
+
+  /* Typography Families */
+  --font-display: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Layout Dimensions & Radii */
+  --sidebar-width: 244px;
+  --header-height: 68px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+
+  /* Elevation */
+  --shadow-card: 0 1px 3px rgba(10, 34, 20, 0.05), 0 1px 2px rgba(10, 34, 20, 0.03);
+  --shadow-modal: 0 20px 48px rgba(4, 24, 13, 0.22);
+  --shadow-dropdown: 0 10px 28px rgba(4, 24, 13, 0.12);
+}
