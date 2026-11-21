@@ -1,3 +1,4 @@
+
 const pool = require("../config/database");
 
 const getAllBooks = async () => {
@@ -93,44 +94,90 @@ const createBook = async (book) => {
 };
 
 const updateBook = async (bookId, book) => {
-    const result = await pool.query(`
-        UPDATE books
-        SET
-            isbn = $1,
-            title = $2,
-            author = $3,
-            category = $4,
-            publisher = $5,
-            publication_year = $6,
-            quantity = $7,
-            available_quantity = $8,
-            status = $9
-        WHERE book_id = $10
-        RETURNING
-            book_id AS "bookId",
-            isbn,
-            title,
-            author,
-            category,
-            publisher,
-            publication_year AS "publicationYear",
-            quantity,
-            available_quantity AS "availableQuantity",
-            status
-    `, [
-        book.isbn,
-        book.title,
-        book.author,
-        book.category,
-        book.publisher,
-        book.publicationYear,
-        book.quantity,
-        book.availableQuantity,
-        book.status,
-        bookId
-    ]);
+    const client = await pool.connect();
 
-    return result.rows[0];
+    try {
+        await client.query("BEGIN");
+
+        const existingResult = await client.query(
+            `SELECT quantity, available_quantity
+             FROM books
+             WHERE book_id = $1
+             FOR UPDATE`,
+            [bookId]
+        );
+
+        const existingBook = existingResult.rows[0];
+
+        if (!existingBook) {
+            await client.query("COMMIT");
+            return null;
+        }
+
+        // Calculate copies currently borrowed.
+        const borrowedCopies =
+            Number(existingBook.quantity) -
+            Number(existingBook.available_quantity);
+
+        // Prevent reducing total copies below borrowed copies.
+        if (book.quantity < borrowedCopies) {
+            throw new Error("BOOK_QUANTITY_BELOW_BORROWED");
+        }
+
+        // Calculate availability using the database inventory.
+        const availableQuantity =
+            book.quantity - borrowedCopies;
+
+        const status =
+            availableQuantity > 0 ? "AVAILABLE" : "UNAVAILABLE";
+
+        const result = await client.query(`
+            UPDATE books
+            SET
+                isbn = $1,
+                title = $2,
+                author = $3,
+                category = $4,
+                publisher = $5,
+                publication_year = $6,
+                quantity = $7,
+                available_quantity = $8,
+                status = $9
+            WHERE book_id = $10
+            RETURNING
+                book_id AS "bookId",
+                isbn,
+                title,
+                author,
+                category,
+                publisher,
+                publication_year AS "publicationYear",
+                quantity,
+                available_quantity AS "availableQuantity",
+                status
+        `, [
+            book.isbn,
+            book.title,
+            book.author,
+            book.category,
+            book.publisher,
+            book.publicationYear,
+            book.quantity,
+            availableQuantity,
+            status,
+            bookId
+        ]);
+
+        await client.query("COMMIT");
+
+        return result.rows[0];
+
+    } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+    } finally {
+        client.release();
+    }
 };
 
 const deleteBook = async (bookId) => {
