@@ -90,7 +90,7 @@ export default function Students() {
         ]}
         sortOptions={[
           { value: 'name', label: 'Name (A–Z)' },
-          { value: 'id', label: 'Student ID' },
+          { value: 'id', label: 'STUD' },
           { value: 'program', label: 'Program' },
         ]}
         sortKey={sortKey}
