@@ -1,3 +1,4 @@
+
 import api from './api';
 
 function toTitleCase(value, fallback = 'Active') {
@@ -32,8 +33,12 @@ function formatDateOnly(val) {
 
 export function mapBookFromServer(row) {
   const copies = Number(row.quantity ?? row.copies ?? 0);
-  const available = Number(row.availableQuantity ?? row.available_quantity ?? copies);
+  const available = Number(
+    row.availableQuantity ?? row.available_quantity ?? copies
+  );
+
   let status = toTitleCase(row.status, 'Available');
+
   if (available === 0) {
     status = 'Unavailable';
   } else if (available <= 2 && copies > 2) {
@@ -54,23 +59,18 @@ export function mapBookFromServer(row) {
   };
 }
 
-export function mapBookToServer(book, isUpdate = false) {
-  const quantity = Number(book.copies ?? book.quantity ?? 0);
-  const availableQuantity = Number(book.available ?? book.availableQuantity ?? quantity);
-  const payload = {
+// Only send book details and total quantity.
+// The backend calculates available copies and inventory status.
+export function mapBookToServer(book) {
+  return {
     title: book.title,
     author: book.author,
     isbn: book.isbn || '',
     category: book.category || '',
     publisher: book.publisher || '',
     publicationYear: book.year ? Number(book.year) : undefined,
-    quantity,
+    quantity: Number(book.copies ?? book.quantity ?? 0),
   };
-  if (isUpdate) {
-    payload.availableQuantity = availableQuantity;
-    payload.status = availableQuantity > 0 ? 'AVAILABLE' : 'UNAVAILABLE';
-  }
-  return payload;
 }
 
 export function mapStudentFromServer(row) {
@@ -80,7 +80,10 @@ export function mapStudentFromServer(row) {
     email: row.email || `${String(row.studentId || 'student').toLowerCase()}@cmd.edu`,
     program: row.program || row.departmentOrProgram || 'General Studies',
     year: row.yearLevel || row.year_level || '1st Year',
-    status: toTitleCase(row.libraryStatus || row.library_status || row.status, 'Active'),
+    status: toTitleCase(
+      row.libraryStatus || row.library_status || row.status,
+      'Active'
+    ),
   };
 }
 
@@ -90,13 +93,17 @@ export function mapFacultyFromServer(row) {
     name: row.name || '',
     email: row.email || '',
     department: row.department || '',
-    status: toTitleCase(row.libraryStatus || row.library_status || row.status, 'Active'),
+    status: toTitleCase(
+      row.libraryStatus || row.library_status || row.status,
+      'Active'
+    ),
   };
 }
 
 export function mapLoanFromServer(row, lookup = {}) {
   const book = lookup.booksById?.[row.bookId];
   const role = toTitleCase(row.borrowerType, 'Student');
+
   const member =
     role === 'Faculty'
       ? lookup.facultyById?.[row.borrowerId]
@@ -111,7 +118,8 @@ export function mapLoanFromServer(row, lookup = {}) {
     role,
     borrowDate: formatDateOnly(row.borrowedDate || row.borrowed_date),
     dueDate: formatDateOnly(row.dueDate || row.due_date),
-    returnedDate: formatDateOnly(row.returnedDate || row.returned_date) || null,
+    returnedDate:
+      formatDateOnly(row.returnedDate || row.returned_date) || null,
     status: toTitleCase(row.status, 'Borrowed'),
   };
 }
@@ -119,14 +127,20 @@ export function mapLoanFromServer(row, lookup = {}) {
 export function mapReservationFromServer(row, lookup = {}) {
   const book = lookup.booksById?.[row.bookId];
   const role = toTitleCase(row.borrowerType, 'Student');
+
   const member =
     role === 'Faculty'
       ? lookup.facultyById?.[row.borrowerId]
       : lookup.studentsById?.[row.borrowerId];
 
-  const reservedDate = formatDateOnly(row.reservationDate || row.reservation_date);
+  const reservedDate = formatDateOnly(
+    row.reservationDate || row.reservation_date
+  );
+
   const expiryDate = reservedDate
-    ? new Date(new Date(reservedDate).getTime() + 7 * 86400000).toISOString().slice(0, 10)
+    ? new Date(
+        new Date(reservedDate).getTime() + 7 * 86400000
+      ).toISOString().slice(0, 10)
     : '';
 
   return {
@@ -144,12 +158,19 @@ export function mapReservationFromServer(row, lookup = {}) {
 
 export function mapFineFromServer(row, lookup = {}) {
   const role = toTitleCase(row.borrowerType, 'Student');
+
   const member =
     role === 'Faculty'
       ? lookup.facultyById?.[row.borrowerId]
       : lookup.studentsById?.[row.borrowerId];
-  const loan = row.loanId ? lookup.loansById?.[row.loanId] : null;
-  const book = loan ? lookup.booksById?.[loan.bookId] : null;
+
+  const loan = row.loanId
+    ? lookup.loansById?.[row.loanId]
+    : null;
+
+  const book = loan
+    ? lookup.booksById?.[loan.bookId]
+    : null;
 
   return {
     id: row.fineId || row.fine_id || row.id,
@@ -157,12 +178,16 @@ export function mapFineFromServer(row, lookup = {}) {
     borrowerType: String(row.borrowerType || 'STUDENT').toUpperCase(),
     loanId: row.loanId || row.loan_id || null,
     borrowerName: member?.name || row.borrowerName || row.borrowerId,
-    bookTitle: book?.title || row.bookTitle || (row.loanId ? `Loan ${row.loanId}` : 'Library Account'),
+    bookTitle:
+      book?.title ||
+      row.bookTitle ||
+      (row.loanId ? `Loan ${row.loanId}` : 'Library Account'),
     reason: row.reason || '',
     daysLate: Number(row.daysLate ?? 0),
     amount: Number(row.amount ?? 0),
     status: toTitleCase(row.status, 'Unpaid'),
-    assessedDate: row.assessedDate || new Date().toISOString().slice(0, 10),
+    assessedDate:
+      row.assessedDate || new Date().toISOString().slice(0, 10),
   };
 }
 
@@ -174,51 +199,88 @@ export const libraryApi = {
 
   async fetchBooks() {
     const { data } = await api.get('/books');
-    return (Array.isArray(data) ? data : data?.data || []).map(mapBookFromServer);
+    return (
+      Array.isArray(data) ? data : data?.data || []
+    ).map(mapBookFromServer);
   },
 
   async createBook(book) {
-    const { data } = await api.post('/books', mapBookToServer(book, false));
+    const { data } = await api.post(
+      '/books',
+      mapBookToServer(book)
+    );
+
     return mapBookFromServer(data);
   },
 
   async updateBook(bookId, book) {
-    const { data } = await api.put(`/books/${encodeURIComponent(bookId)}`, mapBookToServer(book, true));
+    const { data } = await api.put(
+      `/books/${encodeURIComponent(bookId)}`,
+      mapBookToServer(book)
+    );
+
     return mapBookFromServer(data);
   },
 
   async deleteBook(bookId) {
-    const { data } = await api.delete(`/books/${encodeURIComponent(bookId)}`);
+    const { data } = await api.delete(
+      `/books/${encodeURIComponent(bookId)}`
+    );
+
     return data;
   },
 
   async fetchStudents() {
     try {
       const { data } = await api.get('/registrar/students');
-      const list = Array.isArray(data) ? data : data?.data || [];
+
+      const list = Array.isArray(data)
+        ? data
+        : data?.data || [];
+
       if (list.length > 0) {
         return list.map(mapStudentFromServer);
       }
     } catch {
       // Fallback to /library/students if /registrar/students is unavailable
     }
+
     const { data } = await api.get('/library/students');
-    const list = Array.isArray(data) ? data : data?.data || [];
+
+    const list = Array.isArray(data)
+      ? data
+      : data?.data || [];
+
     return list.map(mapStudentFromServer);
   },
 
   async fetchFaculty() {
     const { data } = await api.get('/library/faculty');
-    const list = Array.isArray(data) ? data : data?.data || [];
+
+    const list = Array.isArray(data)
+      ? data
+      : data?.data || [];
+
     return list.map(mapFacultyFromServer);
   },
 
   async fetchLoans(filters = {}) {
-    const { data } = await api.get('/loans', { params: filters });
-    return Array.isArray(data) ? data : data?.data || [];
+    const { data } = await api.get('/loans', {
+      params: filters,
+    });
+
+    return Array.isArray(data)
+      ? data
+      : data?.data || [];
   },
 
-  async createLoan({ borrowerId, borrowerType, bookId, borrowedDate, dueDate }) {
+  async createLoan({
+    borrowerId,
+    borrowerType,
+    bookId,
+    borrowedDate,
+    dueDate,
+  }) {
     const { data } = await api.post('/loans', {
       borrowerId,
       borrowerType: String(borrowerType).toUpperCase(),
@@ -226,47 +288,80 @@ export const libraryApi = {
       borrowedDate,
       dueDate,
     });
+
     return data;
   },
 
   async updateLoan(loanId, { status, returnedDate }) {
-    const { data } = await api.put(`/loans/${encodeURIComponent(loanId)}`, {
-      status: String(status).toUpperCase(),
-      returnedDate: returnedDate || new Date().toISOString().slice(0, 10),
-    });
+    const { data } = await api.put(
+      `/loans/${encodeURIComponent(loanId)}`,
+      {
+        status: String(status).toUpperCase(),
+        returnedDate:
+          returnedDate || new Date().toISOString().slice(0, 10),
+      }
+    );
+
     return data;
   },
 
   async deleteLoan(loanId) {
-    const { data } = await api.delete(`/loans/${encodeURIComponent(loanId)}`);
+    const { data } = await api.delete(
+      `/loans/${encodeURIComponent(loanId)}`
+    );
+
     return data;
   },
 
   async fetchReservations(filters = {}) {
-    const { data } = await api.get('/reservations', { params: filters });
-    return Array.isArray(data) ? data : data?.data || [];
+    const { data } = await api.get('/reservations', {
+      params: filters,
+    });
+
+    return Array.isArray(data)
+      ? data
+      : data?.data || [];
   },
 
-  async createReservation({ borrowerId, borrowerType, bookId }) {
+  async createReservation({
+    borrowerId,
+    borrowerType,
+    bookId,
+  }) {
     const { data } = await api.post('/reservations', {
       borrowerId,
       borrowerType: String(borrowerType).toUpperCase(),
       bookId,
     });
+
     return data;
   },
 
   async deleteReservation(reservationId) {
-    const { data } = await api.delete(`/reservations/${encodeURIComponent(reservationId)}`);
+    const { data } = await api.delete(
+      `/reservations/${encodeURIComponent(reservationId)}`
+    );
+
     return data;
   },
 
   async fetchFines(filters = {}) {
-    const { data } = await api.get('/fines', { params: filters });
-    return Array.isArray(data) ? data : data?.data || [];
+    const { data } = await api.get('/fines', {
+      params: filters,
+    });
+
+    return Array.isArray(data)
+      ? data
+      : data?.data || [];
   },
 
-  async createFine({ borrowerId, borrowerType, loanId, amount, reason }) {
+  async createFine({
+    borrowerId,
+    borrowerType,
+    loanId,
+    amount,
+    reason,
+  }) {
     const { data } = await api.post('/fines', {
       borrowerId,
       borrowerType: String(borrowerType).toUpperCase(),
@@ -274,19 +369,29 @@ export const libraryApi = {
       amount: Number(amount),
       reason,
     });
+
     return data;
   },
 
   async updateFineStatus(fineId, status) {
-    const { data } = await api.put(`/fines/${encodeURIComponent(fineId)}`, {
-      status: String(status).toUpperCase(),
-    });
+    const { data } = await api.put(
+      `/fines/${encodeURIComponent(fineId)}`,
+      {
+        status: String(status).toUpperCase(),
+      }
+    );
+
     return data;
   },
 
   async fetchPayments(filters = {}) {
-    const { data } = await api.get('/finance/payments', { params: filters });
-    return Array.isArray(data) ? data : data?.data || [];
+    const { data } = await api.get('/finance/payments', {
+      params: filters,
+    });
+
+    return Array.isArray(data)
+      ? data
+      : data?.data || [];
   },
 
   async payFine({
@@ -305,6 +410,7 @@ export const libraryApi = {
       paymentMethod,
       ...(paymentReference ? { paymentReference } : {}),
     });
+
     return data;
   },
 
@@ -327,36 +433,67 @@ export const libraryApi = {
       this.fetchPayments().catch(() => []),
     ]);
 
-    const booksById = Object.fromEntries(books.map((b) => [b.id, b]));
-    const studentsById = Object.fromEntries(studentsRes.map((s) => [s.id, s]));
-    const facultyById = Object.fromEntries(facultyRes.map((f) => [f.id, f]));
-    const lookup = { booksById, studentsById, facultyById };
-
-    const borrowings = rawLoans.map((l) => mapLoanFromServer(l, lookup));
-    const loansById = Object.fromEntries(borrowings.map((l) => [l.id, l]));
-
-    const reservations = rawReservations.map((r) =>
-      mapReservationFromServer(r, lookup)
+    const booksById = Object.fromEntries(
+      books.map((book) => [book.id, book])
     );
-    const fines = rawFines.map((f) =>
-      mapFineFromServer(f, { ...lookup, loansById })
+
+    const studentsById = Object.fromEntries(
+      studentsRes.map((student) => [student.id, student])
+    );
+
+    const facultyById = Object.fromEntries(
+      facultyRes.map((member) => [member.id, member])
+    );
+
+    const lookup = {
+      booksById,
+      studentsById,
+      facultyById,
+    };
+
+    const borrowings = rawLoans.map((loan) =>
+      mapLoanFromServer(loan, lookup)
+    );
+
+    const loansById = Object.fromEntries(
+      borrowings.map((loan) => [loan.id, loan])
+    );
+
+    const reservations = rawReservations.map((reservation) =>
+      mapReservationFromServer(reservation, lookup)
+    );
+
+    const fines = rawFines.map((fine) =>
+      mapFineFromServer(fine, {
+        ...lookup,
+        loansById,
+      })
     );
 
     const returns = borrowings
-      .filter((l) => l.status === 'Returned')
-      .map((l, idx) => {
-        const isLate = l.returnedDate && l.dueDate && l.returnedDate > l.dueDate;
-        const matchingFine = fines.find((f) => f.loanId === l.id);
+      .filter((loan) => loan.status === 'Returned')
+      .map((loan, idx) => {
+        const isLate =
+          loan.returnedDate &&
+          loan.dueDate &&
+          loan.returnedDate > loan.dueDate;
+
+        const matchingFine = fines.find(
+          (fine) => fine.loanId === loan.id
+        );
+
         return {
           id: `RET-${4001 + idx}`,
-          borrowId: l.id,
-          bookTitle: l.bookTitle,
-          borrowerName: l.borrowerName,
-          borrowDate: l.borrowDate,
-          returnDate: l.returnedDate || l.dueDate,
+          borrowId: loan.id,
+          bookTitle: loan.bookTitle,
+          borrowerName: loan.borrowerName,
+          borrowDate: loan.borrowDate,
+          returnDate: loan.returnedDate || loan.dueDate,
           condition: 'Good',
           status: isLate ? 'Late' : 'On Time',
-          fineAmount: matchingFine ? Number(matchingFine.amount) : 0,
+          fineAmount: matchingFine
+            ? Number(matchingFine.amount)
+            : 0,
         };
       });
 

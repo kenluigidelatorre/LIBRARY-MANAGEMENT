@@ -1,43 +1,16 @@
-const REGISTRAR_API_URL =
-  process.env.REGISTRAR_API_URL ||
-  "http://localhost:5001/api/registrar/students";
+const registrarService = require("./registrar.service");
 
-// Get all students from Registrar
+// Get all students through the shared Registrar service
 const getStudents = async () => {
-  const response = await fetch(REGISTRAR_API_URL);
-
-  if (!response.ok) {
-    throw new Error(`Registrar API error: ${response.status}`);
-  }
-
-  const result = await response.json();
-
-  return result.data;
+    return await registrarService.getStudents();
 };
 
-// Get one student from Registrar
+// Get one student through the shared Registrar service
 const getStudentById = async (studentId) => {
-  const response = await fetch(
-    `${REGISTRAR_API_URL}/${encodeURIComponent(studentId)}`
-  );
-
-  if (!response.ok) {
-    const error = new Error(
-      response.status === 404
-        ? "Student not found in Registrar."
-        : `Registrar API error: ${response.status}`
-    );
-
-    error.statusCode = response.status;
-    throw error;
-  }
-
-  const result = await response.json();
-
-  return result.data;
+    return await registrarService.getStudent(studentId);
 };
 
 module.exports = {
-  getStudents,
-  getStudentById,
+    getStudents,
+    getStudentById
 };
