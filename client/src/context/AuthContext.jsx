@@ -21,6 +21,7 @@ const DEFAULT_ADMIN = {
   name: 'Admin User',
   email: 'admin@cmdlibrary.edu',
   role: 'Head Librarian',
+  roleCode: 'ADMIN',
   token: 'demo-session-token',
 };
 
@@ -30,6 +31,7 @@ export function AuthProvider({ children }) {
       const stored = localStorage.getItem(AUTH_STORAGE_KEY);
       if (stored === 'null') return null;
       if (stored) return JSON.parse(stored);
+
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(DEFAULT_ADMIN));
       return DEFAULT_ADMIN;
     } catch {
@@ -41,24 +43,34 @@ export function AuthProvider({ children }) {
     if (!email || !password) {
       return { ok: false, error: 'Please enter both email address and password.' };
     }
+
     if (password.length < 4) {
       return { ok: false, error: 'Password must be at least 4 characters.' };
     }
 
     let registered = [];
+
     try {
-      registered = JSON.parse(localStorage.getItem(REGISTERED_USERS_KEY) || '[]');
+      registered = JSON.parse(
+        localStorage.getItem(REGISTERED_USERS_KEY) || '[]'
+      );
     } catch {
       registered = [];
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     const matched = registered.find(
-      (u) => u.email.toLowerCase() === email.trim().toLowerCase()
+      (u) => u.email.toLowerCase() === normalizedEmail
     );
 
     if (matched && matched.password !== password) {
       return { ok: false, error: 'Incorrect password for this account.' };
     }
+
+    const isAdmin =
+      normalizedEmail === DEFAULT_ADMIN.email.toLowerCase() ||
+      matched?.roleCode === 'ADMIN';
 
     const sessionUser = matched
       ? {
@@ -66,22 +78,31 @@ export function AuthProvider({ children }) {
           name: matched.name,
           email: matched.email,
           role: matched.role || 'Librarian',
+          roleCode: matched.roleCode || 'STAFF',
           token: 'session-' + Date.now(),
         }
       : {
-          id: 'ADM-001',
-          name: email.includes('admin') ? 'Admin User' : email.split('@')[0],
+          id: DEFAULT_ADMIN.id,
+          name: email.includes('admin')
+            ? DEFAULT_ADMIN.name
+            : email.split('@')[0],
           email: email.trim(),
-          role: 'Head Librarian',
+          role: isAdmin ? 'Head Librarian' : 'Library Staff',
+          roleCode: isAdmin ? 'ADMIN' : 'STAFF',
           token: 'session-' + Date.now(),
         };
 
     setUser(sessionUser);
+
     if (rememberMe) {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sessionUser));
+      localStorage.setItem(
+        AUTH_STORAGE_KEY,
+        JSON.stringify(sessionUser)
+      );
     } else {
       localStorage.removeItem(AUTH_STORAGE_KEY);
     }
+
     return { ok: true, user: sessionUser };
   };
 
@@ -91,14 +112,24 @@ export function AuthProvider({ children }) {
     }
 
     let registered = [];
+
     try {
-      registered = JSON.parse(localStorage.getItem(REGISTERED_USERS_KEY) || '[]');
+      registered = JSON.parse(
+        localStorage.getItem(REGISTERED_USERS_KEY) || '[]'
+      );
     } catch {
       registered = [];
     }
 
-    if (registered.some((u) => u.email.toLowerCase() === email.trim().toLowerCase())) {
-      return { ok: false, error: 'An account with this email already exists.' };
+    if (
+      registered.some(
+        (u) => u.email.toLowerCase() === email.trim().toLowerCase()
+      )
+    ) {
+      return {
+        ok: false,
+        error: 'An account with this email already exists.',
+      };
     }
 
     const newUser = {
@@ -107,19 +138,29 @@ export function AuthProvider({ children }) {
       email: email.trim(),
       password,
       role: 'Library Staff',
+      roleCode: 'STAFF',
     };
 
-    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify([...registered, newUser]));
+    localStorage.setItem(
+      REGISTERED_USERS_KEY,
+      JSON.stringify([...registered, newUser])
+    );
 
     const sessionUser = {
       id: newUser.id,
       name: newUser.name,
       email: newUser.email,
       role: newUser.role,
+      roleCode: newUser.roleCode,
       token: 'session-' + Date.now(),
     };
+
     setUser(sessionUser);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sessionUser));
+    localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify(sessionUser)
+    );
+
     return { ok: true, user: sessionUser };
   };
 
@@ -130,9 +171,14 @@ export function AuthProvider({ children }) {
 
   const updateProfile = (updates) => {
     if (!user) return;
+
     const updated = { ...user, ...updates };
     setUser(updated);
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+
+    localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify(updated)
+    );
   };
 
   return (

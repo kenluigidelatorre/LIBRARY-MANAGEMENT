@@ -1,3 +1,4 @@
+
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -46,6 +47,11 @@ const NAV_ITEMS = [
 export default function Sidebar({ isOpen, onClose, onLogout }) {
   const { user } = useAuth();
 
+  const isAdmin =
+    user?.roleCode === 'ADMIN' ||
+    user?.role === 'Head Librarian' ||
+    user?.role === 'ADMIN';
+
   return (
     <>
       <div
@@ -78,11 +84,18 @@ export default function Sidebar({ isOpen, onClose, onLogout }) {
 
       <aside className={`sidebar ${isOpen ? 'open' : ''}`} aria-label="Main navigation">
         <div className="flex items-center justify-between pr-3">
-          <NavLink to="/dashboard" className="sidebar-brand flex-1" onClick={onClose}>
+          <NavLink
+            to="/dashboard"
+            className="sidebar-brand flex-1"
+            onClick={onClose}
+          >
             <BrandEmblem size={38} />
+
             <div className="min-w-0">
               <div className="sidebar-brand-title">CMD</div>
-              <div className="sidebar-brand-subtitle">Library Management System</div>
+              <div className="sidebar-brand-subtitle">
+                Library Management System
+              </div>
             </div>
           </NavLink>
 
@@ -121,7 +134,9 @@ export default function Sidebar({ isOpen, onClose, onLogout }) {
               key={to}
               to={to}
               onClick={onClose}
-              className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+              className={({ isActive }) =>
+                `sidebar-link ${isActive ? 'active' : ''}`
+              }
             >
               <Icon size={18} strokeWidth={2} />
               <span>{label}</span>
