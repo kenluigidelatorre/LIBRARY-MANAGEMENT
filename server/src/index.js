@@ -1,3 +1,4 @@
+
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
@@ -17,6 +18,7 @@ const loanRoutes = require("./routes/loans.routes");
 const reservationRoutes = require("./routes/reservations.routes");
 const fineRoutes = require("./routes/fines.routes");
 const financePaymentRoutes = require("./routes/financePayments.routes");
+const authRoutes = require("./routes/auth.routes");
 
 const app = express();
 
@@ -34,6 +36,7 @@ app.get("/", (req, res) => {
     });
 });
 
+// API ROUTES
 app.use("/api/v1/books", bookRoutes);
 app.use("/api/v1/library/students", libraryStudentRoutes);
 app.use("/api/v1/library/faculty", libraryFacultyRoutes);
@@ -42,8 +45,15 @@ app.use("/api/v1/loans", loanRoutes);
 app.use("/api/v1/reservations", reservationRoutes);
 app.use("/api/v1/fines", fineRoutes);
 app.use("/api/v1/finance/payments", financePaymentRoutes);
+
+// AUTHENTICATION ROUTES
+app.use("/api/auth", authRoutes);
+app.use("/api/v1/auth", authRoutes);
+
+// API DOCUMENTATION
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
 
+// HEALTH CHECK
 app.get("/api/v1/health", (req, res) => {
     res.json({ status: "ok" });
 });

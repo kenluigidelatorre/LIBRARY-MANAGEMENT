@@ -1,0 +1,20 @@
+import { useEffect,useMemo,useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
+import PageHeader from "../components/PageHeader";
+import DataTable from "../components/DataTable";
+import Modal from "../components/Modal";
+import Status from "../components/Status";
+import { reservationsApi,booksApi,studentsApi,facultyApi } from "../api/services";
+import { date } from "../utils/format";
+export default function Reservations(){
+ const [rows,setRows]=useState([]),[books,setBooks]=useState([]),[students,setStudents]=useState([]),[faculty,setFaculty]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[search,setSearch]=useState(""),[modal,setModal]=useState(false),[form,setForm]=useState({borrowerType:"STUDENT",borrowerId:"",bookId:""}),[message,setMessage]=useState(""),[saving,setSaving]=useState(false);
+ const load=async()=>{setLoading(true);setError("");try{const [r,b,s,f]=await Promise.all([reservationsApi.list(),booksApi.list(),studentsApi.list(),facultyApi.list()]);setRows(r);setBooks(b);setStudents(s);setFaculty(f)}catch(e){setError(e.message)}finally{setLoading(false)}};
+ useEffect(()=>{load()},[]);
+ const filtered=useMemo(()=>rows.filter(r=>[r.reservationId,r.borrowerId,r.borrowerType,r.bookId,r.status].join(" ").toLowerCase().includes(search.toLowerCase())),[rows,search]);
+ const people=form.borrowerType==="STUDENT"?students:faculty;
+ const save=async(e)=>{e.preventDefault();setSaving(true);setMessage("");try{await reservationsApi.create(form);setModal(false);await load()}catch(e){setMessage(e.message)}finally{setSaving(false)}};
+ const remove=async(r)=>{if(!confirm(`Delete reservation ${r.reservationId}?`))return;try{await reservationsApi.remove(r.reservationId);await load()}catch(e){setError(e.message)}};
+ const columns=[{key:"reservationId",label:"RESERVATION ID"},{key:"borrowerId",label:"BORROWER",render:r=><div className="primary-cell"><strong>{r.borrowerId}</strong><span>{r.borrowerType}</span></div>},{key:"bookId",label:"BOOK ID"},{key:"reservationDate",label:"DATE RESERVED",render:r=>date(r.reservationDate)},{key:"status",label:"STATUS",render:r=><Status value={r.status}/>},{key:"actions",label:"ACTIONS",render:r=><button className="icon-button danger-hover" onClick={()=>remove(r)} title="Delete"><Trash2 size={16}/></button>}];
+ return <><PageHeader title="Reservations" description="Track book reservations and requests." action={<button className="btn btn-primary" onClick={()=>{setMessage("");setModal(true)}}><Plus size={17}/> New reservation</button>}/><DataTable columns={columns} rows={filtered} loading={loading} error={error} onRetry={load} search={search} onSearch={setSearch} searchPlaceholder="Search reservation, borrower, or book..."/>
+ {modal&&<Modal title="Create reservation" onClose={()=>setModal(false)}><form className="form-stack" onSubmit={save}><label className="field">Borrower type<select value={form.borrowerType} onChange={e=>setForm(p=>({...p,borrowerType:e.target.value,borrowerId:""}))}><option value="STUDENT">Student</option><option value="FACULTY">Faculty</option></select></label><label className="field">Borrower<select required value={form.borrowerId} onChange={e=>setForm(p=>({...p,borrowerId:e.target.value}))}><option value="">Select borrower</option>{people.map(p=>{const id=form.borrowerType==="STUDENT"?p.studentId:p.facultyId;return <option key={id} value={id}>{id} — {p.name}</option>})}</select></label><label className="field">Book<select required value={form.bookId} onChange={e=>setForm(p=>({...p,bookId:e.target.value}))}><option value="">Select book</option>{books.map(b=><option key={b.bookId} value={b.bookId}>{b.bookId} — {b.title}</option>)}</select></label>{message&&<div className="form-error">{message}</div>}<div className="form-actions"><button type="button" className="btn btn-light" onClick={()=>setModal(false)}>Cancel</button><button className="btn btn-primary" disabled={saving}>{saving?"Saving...":"Create reservation"}</button></div></form></Modal>}</>;
+}
