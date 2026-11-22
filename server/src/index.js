@@ -92,6 +92,9 @@ app.use(
 // API ROUTES
 // =====================================
 
+// Authentication routes
+app.use("/api/auth", authRoutes);
+
 // Existing API routes
 app.use("/api/books", bookRoutes);
 app.use("/api/library/faculty", libraryFacultyRoutes);

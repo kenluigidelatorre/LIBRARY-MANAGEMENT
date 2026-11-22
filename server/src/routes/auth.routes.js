@@ -24,7 +24,7 @@ router.post("/login", async (req, res, next) => {
 
         const result = await pool.query(
             `SELECT id, full_name, email, password, role
-             FROM public."user"
+             FROM public.users
              WHERE LOWER(email) = LOWER($1)`,
             [email.trim()]
         );
@@ -82,7 +82,7 @@ router.get("/me", authenticateToken, async (req, res, next) => {
     try {
         const result = await pool.query(
             `SELECT id, full_name, email, role
-             FROM public."user"
+             FROM public.users
              WHERE id = $1`,
             [req.user.id]
         );
