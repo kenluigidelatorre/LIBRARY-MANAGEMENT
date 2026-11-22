@@ -1,3 +1,4 @@
+
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -11,8 +12,10 @@ import {
   BarChart3,
   Settings,
   LogOut,
+  UserPlus,
   X,
 } from 'lucide-react';
+
 import BrandEmblem from '../common/BrandEmblem';
 import { useAuth } from '../../context/AuthContext';
 
@@ -27,10 +30,21 @@ const NAV_ITEMS = [
   { to: '/fines', label: 'Fines', icon: CircleDollarSign },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/settings', label: 'Settings', icon: Settings },
+  {
+    to: '/staff-management',
+    label: 'Staff Management',
+    icon: UserPlus,
+    adminOnly: true,
+  },
 ];
 
 export default function Sidebar({ isOpen, onClose, onLogout }) {
   const { user } = useAuth();
+
+  const isAdmin =
+    user?.roleCode === 'ADMIN' ||
+    user?.role === 'Head Librarian' ||
+    user?.role === 'ADMIN';
 
   return (
     <>
@@ -39,15 +53,27 @@ export default function Sidebar({ isOpen, onClose, onLogout }) {
         onClick={onClose}
         aria-hidden="true"
       />
-      <aside className={`sidebar ${isOpen ? 'open' : ''}`} aria-label="Main navigation">
+
+      <aside
+        className={`sidebar ${isOpen ? 'open' : ''}`}
+        aria-label="Main navigation"
+      >
         <div className="flex items-center justify-between pr-3">
-          <NavLink to="/dashboard" className="sidebar-brand flex-1" onClick={onClose}>
+          <NavLink
+            to="/dashboard"
+            className="sidebar-brand flex-1"
+            onClick={onClose}
+          >
             <BrandEmblem size={38} />
+
             <div className="min-w-0">
               <div className="sidebar-brand-title">CMD</div>
-              <div className="sidebar-brand-subtitle">Library Management System</div>
+              <div className="sidebar-brand-subtitle">
+                Library Management System
+              </div>
             </div>
           </NavLink>
+
           <button
             type="button"
             onClick={onClose}
@@ -59,12 +85,16 @@ export default function Sidebar({ isOpen, onClose, onLogout }) {
         </div>
 
         <nav className="sidebar-nav">
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+          {NAV_ITEMS.filter(
+            ({ adminOnly }) => !adminOnly || isAdmin
+          ).map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
               onClick={onClose}
-              className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+              className={({ isActive }) =>
+                `sidebar-link ${isActive ? 'active' : ''}`
+              }
             >
               <Icon size={18} strokeWidth={2} />
               <span>{label}</span>
