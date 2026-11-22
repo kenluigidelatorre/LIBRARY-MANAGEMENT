@@ -7,13 +7,16 @@ const fs = require("fs");
 const path = require("path");
 const yaml = require("yaml");
 const swaggerUi = require("swagger-ui-express");
-
 const pool = require("./config/database");
 
+// Middleware
+const requestLogger = require("./middleware/requestLogger");
+const notFound = require("./middleware/notFound");
+const errorHandler = require("./middleware/errorHandler");
+
+// Routes
 const bookRoutes = require("./routes/books.routes");
-const libraryStudentRoutes = require("./routes/libraryStudents.routes");
 const libraryFacultyRoutes = require("./routes/libraryFaculty.routes");
-const registrarRoutes = require("./routes/registrar.routes");
 const loanRoutes = require("./routes/loans.routes");
 const reservationRoutes = require("./routes/reservations.routes");
 const fineRoutes = require("./routes/fines.routes");
@@ -22,23 +25,42 @@ const authRoutes = require("./routes/auth.routes");
 
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+// Allowed frontend origins
+const allowedOrigins = (
+    process.env.CORS_ORIGINS || "http://localhost:5173"
+)
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
 
-const openapiPath = path.join(__dirname, "../openapi.yaml");
-const openapiDocument = yaml.parse(
-    fs.readFileSync(openapiPath, "utf8")
+// CORS
+app.use(
+    cors({
+        origin(origin, callback) {
+            if (!origin || allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+
+            return callback(new Error("CORS_ORIGIN_NOT_ALLOWED"));
+        }
+    })
 );
 
+// Global middleware
+app.use(express.json({ limit: "1mb" }));
+app.use(requestLogger);
+
+// Root endpoint
 app.get("/", (req, res) => {
     res.json({
-        message: "Library Management System API is running"
+        status: "success",
+        message: "Library Management System API is running."
     });
 });
 
 // API ROUTES
 app.use("/api/v1/books", bookRoutes);
-app.use("/api/v1/library/students", libraryStudentRoutes);
+app.use("/api/v1/library/students", libraryStudentsRoutes);
 app.use("/api/v1/library/faculty", libraryFacultyRoutes);
 app.use("/api/v1/registrar", registrarRoutes);
 app.use("/api/v1/loans", loanRoutes);
@@ -55,23 +77,39 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
 
 // HEALTH CHECK
 app.get("/api/v1/health", (req, res) => {
-    res.json({ status: "ok" });
+    res.status(200).json({
+        status: "success",
+        service: "library-management-api",
+        message: "API v1 is running."
+    });
 });
 
-const PORT = process.env.PORT || 5000;
+// 404 handler - must be after ALL routes
+app.use(notFound);
 
-const startServer = async () => {
-    try {
-        await pool.query("SELECT NOW()");
+// Global error handler - must be last
+app.use(errorHandler);
 
-        console.log("Connected to PostgreSQL");
+// =====================================
+// SERVER
+// =====================================
 
-        app.listen(PORT, () => {
-            console.log(`Server running on http://localhost:${PORT}`);
-        });
-    } catch (error) {
-        console.error("Database connection failed:", error.message);
-    }
-};
+const PORT = Number(process.env.PORT || 5000);
+
+if (require.main === module) {
+    app.listen(PORT, async () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+
+        try {
+            await pool.query("SELECT 1");
+            console.log("Connected to PostgreSQL");
+        } catch (error) {
+            console.error(
+                "PostgreSQL is not available:",
+                error.message
+            );
+        }
+    });
+}
 
 startServer();

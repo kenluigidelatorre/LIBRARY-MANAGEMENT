@@ -5,7 +5,7 @@ const getAllStudents = async () => {
         SELECT
             student_id AS "studentId",
             name,
-            program,
+            course,
             year_level AS "yearLevel",
             library_status AS "libraryStatus"
         FROM library_students

@@ -55,6 +55,9 @@ router.post("/", async (req, res) => {
     } catch (error) {
         console.error(error);
 
+        if (["INVALID_FINE_INPUT", "INVALID_BORROWER_TYPE"].includes(error.message)) {
+            return res.status(400).json({ statusCode: 400, error: "Bad Request", message: "Provide a borrower, valid borrower type, positive amount, and reason" });
+        }
         if (error.message === "LOAN_NOT_FOUND") {
             return res.status(404).json({
                 statusCode: 404,
@@ -90,11 +93,11 @@ router.put("/:fineId", async (req, res) => {
     } catch (error) {
         console.error(error);
 
-        res.status(500).json({
-            statusCode: 500,
-            error: "Internal Server Error",
-            message: "Failed to update fine"
-        });
+        if (error.message === "INVALID_FINE_STATUS") {
+            return res.status(400).json({ statusCode: 400, error: "Bad Request", message: "Fine status may only be changed to UNPAID or WAIVED here. PAID requires verified Finance confirmation." });
+        }
+        console.error("Fine update error:", error.message);
+        res.status(500).json({ statusCode: 500, error: "Internal Server Error", message: "Failed to update fine" });
     }
 });
 

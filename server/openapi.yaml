@@ -29,8 +29,21 @@ tags:
     description: Library fines
   - name: Finance
     description: Finance payment integration
+  - name: System
+    description: API status and health checks
 
 paths:
+  /health:
+    get:
+      tags:
+        - System
+      summary: Check API and database health
+      responses:
+        '200':
+          description: API and database are available
+        '503':
+          description: API is running but database is unavailable
+
 
   /books:
     get:
@@ -525,15 +538,28 @@ paths:
               $ref: '#/components/schemas/NewFinancePaymentPayload'
       responses:
         '201':
-          description: Payment created
+          description: Payment confirmed by Finance and recorded
+
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/FinancePayment'
+        '202':
+          description: Payment is simulated or awaiting Finance confirmation; fine remains unpaid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulatedPaymentResponse'
+        '400':
+          description: Invalid payment request
         '404':
           description: Fine not found
         '409':
-          description: Fine already paid
+          description: Fine already paid or waived
+        '502':
+          description: Finance service unavailable or rejected the request
+        '504':
+          description: Finance service timed out
 
   /finance/payments/{paymentId}:
     get:
@@ -964,6 +990,34 @@ components:
           enum:
             - PAID
             - REFUNDED
+
+    SimulatedPaymentResponse:
+      type: object
+      required:
+        - mode
+        - simulated
+        - status
+        - message
+        - fineId
+      properties:
+        mode:
+          type: string
+          enum: [mock, live]
+        simulated:
+          type: boolean
+        status:
+          type: string
+          enum: [SIMULATED, PENDING]
+        message:
+          type: string
+        fineId:
+          type: string
+        amount:
+          type: number
+          format: float
+        paymentReference:
+          type: string
+          nullable: true
 
     NewFinancePaymentPayload:
       type: object

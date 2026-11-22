@@ -1,3 +1,4 @@
+
 import {
   createContext,
   useContext,
@@ -7,200 +8,131 @@ import {
 
 import api from '../services/api';
 
+import { createContext, useContext, useState } from 'react';
+
+
 const AuthContext = createContext(null);
 
 const AUTH_STORAGE_KEY = 'cmd_library_auth_user';
+const REGISTERED_USERS_KEY = 'cmd_library_registered_users';
 
-function formatUser(apiUser, token) {
-  const roleLabels = {
-    ADMIN: 'Head Librarian',
-    LIBRARY_STAFF: 'Library Staff',
-  };
-
-  return {
-    id: apiUser.id,
-    name: apiUser.fullName,
-    email: apiUser.email,
-    role: roleLabels[apiUser.role] || apiUser.role,
-    roleCode: apiUser.role,
-    token,
-  };
-}
-
-function getStoredSession() {
-  try {
-    const saved =
-      localStorage.getItem(AUTH_STORAGE_KEY) ||
-      sessionStorage.getItem(AUTH_STORAGE_KEY);
-
-    if (!saved) return null;
-
-    const parsed = JSON.parse(saved);
-
-    if (
-      !parsed?.token ||
-      parsed.token === 'demo-session-token' ||
-      parsed.token.startsWith('session-')
-    ) {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-      sessionStorage.removeItem(AUTH_STORAGE_KEY);
-      return null;
-    }
-
-    return parsed;
-  } catch {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    sessionStorage.removeItem(AUTH_STORAGE_KEY);
-    return null;
-  }
-}
-
-function saveSession(user, rememberMe) {
-  localStorage.removeItem(AUTH_STORAGE_KEY);
-  sessionStorage.removeItem(AUTH_STORAGE_KEY);
-
-  const storage = rememberMe ? localStorage : sessionStorage;
-
-  storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-}
-
-function clearSession() {
-  localStorage.removeItem(AUTH_STORAGE_KEY);
-  sessionStorage.removeItem(AUTH_STORAGE_KEY);
-}
+const DEFAULT_ADMIN = {
+  id: 'ADM-001',
+  name: 'Admin User',
+  email: 'admin@cmdlibrary.edu',
+  role: 'Head Librarian',
+  token: 'demo-session-token',
+};
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
-
-  // Restore and verify an existing session.
-  useEffect(() => {
-    let active = true;
-
-    const restoreSession = async () => {
-      const storedUser = getStoredSession();
-
-      if (!storedUser?.token) {
-        if (active) setAuthLoading(false);
-        return;
-      }
-
-      try {
-        const response = await api.get('/auth/me');
-
-        const authenticatedUser = formatUser(
-          response.data.user,
-          storedUser.token
-        );
-
-        if (active) {
-          setUser(authenticatedUser);
-        }
-
-        saveSession(
-          authenticatedUser,
-          Boolean(localStorage.getItem(AUTH_STORAGE_KEY))
-        );
-      } catch {
-        clearSession();
-
-        if (active) {
-          setUser(null);
-        }
-      } finally {
-        if (active) {
-          setAuthLoading(false);
-        }
-      }
-    };
-
-    restoreSession();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  // Authenticate using the real backend.
-  const login = async ({
-    email,
-    password,
-    rememberMe = true,
-  }) => {
-    if (!email?.trim() || !password) {
-      return {
-        ok: false,
-        error: 'Please enter both email address and password.',
-      };
-    }
-
+  const [user, setUser] = useState(() => {
     try {
-      const response = await api.post('/auth/login', {
-        email: email.trim(),
-        password,
-      });
-
-      const { token, user: apiUser } = response.data;
-
-      if (!token || !apiUser) {
-        return {
-          ok: false,
-          error: 'Invalid authentication response from server.',
-        };
-      }
-
-      const authenticatedUser = formatUser(apiUser, token);
-
-      saveSession(authenticatedUser, rememberMe);
-      setUser(authenticatedUser);
-
-      return {
-        ok: true,
-        user: authenticatedUser,
-      };
-    } catch (error) {
-      return {
-        ok: false,
-        error:
-          error.message === 'Network Error'
-            ? 'Unable to connect to the server. Please try again.'
-            : error.message,
-      };
+      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (stored === 'null') return null;
+      if (stored) return JSON.parse(stored);
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(DEFAULT_ADMIN));
+      return DEFAULT_ADMIN;
+    } catch {
+      return DEFAULT_ADMIN;
     }
-  };
-
-  // Registration is disabled until a secure backend endpoint exists.
-  const register = async () => ({
-    ok: false,
-    error:
-      'Account registration is currently unavailable. Please contact your library administrator.',
   });
 
-  const logout = () => {
-    clearSession();
-    setUser(null);
+  const login = ({ email, password, rememberMe = true }) => {
+    if (!email || !password) {
+      return { ok: false, error: 'Please enter both email address and password.' };
+    }
+    if (password.length < 4) {
+      return { ok: false, error: 'Password must be at least 4 characters.' };
+    }
+
+    let registered = [];
+    try {
+      registered = JSON.parse(localStorage.getItem(REGISTERED_USERS_KEY) || '[]');
+    } catch {
+      registered = [];
+    }
+
+    const matched = registered.find(
+      (u) => u.email.toLowerCase() === email.trim().toLowerCase()
+    );
+
+    if (matched && matched.password !== password) {
+      return { ok: false, error: 'Incorrect password for this account.' };
+    }
+
+    const sessionUser = matched
+      ? {
+          id: matched.id,
+          name: matched.name,
+          email: matched.email,
+          role: matched.role || 'Librarian',
+          token: 'session-' + Date.now(),
+        }
+      : {
+          id: 'ADM-001',
+          name: email.includes('admin') ? 'Admin User' : email.split('@')[0],
+          email: email.trim(),
+          role: 'Head Librarian',
+          token: 'session-' + Date.now(),
+        };
+
+    setUser(sessionUser);
+    if (rememberMe) {
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sessionUser));
+    } else {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+    }
+    return { ok: true, user: sessionUser };
   };
 
-  // Only allow local display-name updates.
-  // Email and role must come from the authenticated backend account.
-  const updateProfile = (updates) => {
-    if (!user) return;
+  const register = ({ name, email, password }) => {
+    if (!name || !email || !password) {
+      return { ok: false, error: 'All fields are required.' };
+    }
 
-    const updatedUser = {
-      ...user,
-      name: updates.name?.trim() || user.name,
+    let registered = [];
+    try {
+      registered = JSON.parse(localStorage.getItem(REGISTERED_USERS_KEY) || '[]');
+    } catch {
+      registered = [];
+    }
+
+    if (registered.some((u) => u.email.toLowerCase() === email.trim().toLowerCase())) {
+      return { ok: false, error: 'An account with this email already exists.' };
+    }
+
+    const newUser = {
+      id: 'USR-' + Math.floor(100 + Math.random() * 900),
+      name: name.trim(),
+      email: email.trim(),
+      password,
+      role: 'Library Staff',
     };
 
-    setUser(updatedUser);
+    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify([...registered, newUser]));
 
-    const storage = localStorage.getItem(AUTH_STORAGE_KEY)
-      ? localStorage
-      : sessionStorage;
+    const sessionUser = {
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      role: newUser.role,
+      token: 'session-' + Date.now(),
+    };
+    setUser(sessionUser);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(sessionUser));
+    return { ok: true, user: sessionUser };
+  };
 
-    storage.setItem(
-      AUTH_STORAGE_KEY,
-      JSON.stringify(updatedUser)
-    );
+  const logout = () => {
+    setUser(null);
+    localStorage.setItem(AUTH_STORAGE_KEY, 'null');
+  };
+
+  const updateProfile = (updates) => {
+    if (!user) return;
+    const updated = { ...user, ...updates };
+    setUser(updated);
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
   };
 
   return (

@@ -1,28 +1,35 @@
+
 const express = require("express");
 const registrarService = require("../services/registrar.service");
 
 const router = express.Router();
 
+// GET /api/registrar/students
 router.get("/students", async (req, res) => {
     try {
         const students = await registrarService.getStudents({
-            department: req.query.department,
-            program: req.query.program,
-            status: req.query.status
+            studentId: req.query.studentId,
+            status: req.query.status,
+            department: req.query.department
         });
 
-        res.status(200).json(students);
+        return res.status(200).json({
+            success: true,
+            count: students.length,
+            data: students
+        });
     } catch (error) {
-        console.error(error);
+        console.error("Registrar lookup error:", error.message);
 
-        res.status(500).json({
-            statusCode: 500,
-            error: "Internal Server Error",
-            message: "Failed to retrieve Registrar students"
+        return res.status(error.status || 502).json({
+            success: false,
+            message: "Failed to retrieve Registrar students",
+            error: error.message
         });
     }
 });
 
+// GET /api/registrar/students/:studentId
 router.get("/students/:studentId", async (req, res) => {
     try {
         const student = await registrarService.getStudent(
@@ -31,20 +38,22 @@ router.get("/students/:studentId", async (req, res) => {
 
         if (!student) {
             return res.status(404).json({
-                statusCode: 404,
-                error: "Not Found",
-                message: "Registrar student not found"
+                success: false,
+                message: "Student not found"
             });
         }
 
-        res.status(200).json(student);
+        return res.status(200).json({
+            success: true,
+            data: student
+        });
     } catch (error) {
-        console.error(error);
+        console.error("Registrar student error:", error.message);
 
-        res.status(500).json({
-            statusCode: 500,
-            error: "Internal Server Error",
-            message: "Failed to retrieve Registrar student"
+        return res.status(error.status || 502).json({
+            success: false,
+            message: "Failed to retrieve Registrar student",
+            error: error.message
         });
     }
 });

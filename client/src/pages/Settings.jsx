@@ -1,10 +1,248 @@
-import { useState } from "react";
-import { Save, Info, ShieldCheck, Bell, SlidersHorizontal } from "lucide-react";
-import PageHeader from "../components/PageHeader";
-export default function Settings(){
- const [saved,setSaved]=useState(false);
- const [settings,setSettings]=useState(()=>({systemName:localStorage.getItem("library-system-name")||"IDSC Library Management System",loanDays:localStorage.getItem("library-loan-days")||"14",maxBooks:localStorage.getItem("library-max-books")||"5",fineRate:localStorage.getItem("library-fine-rate")||"10",reservationDays:localStorage.getItem("library-reservation-days")||"3",emailAlerts:localStorage.getItem("library-email-alerts")!=="false"}));
- const change=(e)=>{const {name,value,type,checked}=e.target;setSettings(p=>({...p,[name]:type==="checkbox"?checked:value}));setSaved(false)};
- const save=(e)=>{e.preventDefault();localStorage.setItem("library-system-name",settings.systemName);localStorage.setItem("library-loan-days",settings.loanDays);localStorage.setItem("library-max-books",settings.maxBooks);localStorage.setItem("library-fine-rate",settings.fineRate);localStorage.setItem("library-reservation-days",settings.reservationDays);localStorage.setItem("library-email-alerts",String(settings.emailAlerts));setSaved(true)};
- return <><PageHeader title="Settings" description="System information and local library policy preferences."/><form onSubmit={save} className="settings-layout"><section className="panel settings-panel"><div className="settings-title"><div className="settings-icon"><Info size={19}/></div><div><h3>System information</h3><p>General details about this workspace</p></div></div><label className="field">System name<input name="systemName" value={settings.systemName} onChange={change}/></label><div className="readonly-info"><span>Application</span><strong>Library Management System</strong></div><div className="readonly-info"><span>Frontend</span><strong>React + Vite</strong></div><div className="readonly-info"><span>API base URL</span><strong>{import.meta.env.VITE_API_BASE_URL||"http://localhost:5000/api"}</strong></div></section><section className="panel settings-panel"><div className="settings-title"><div className="settings-icon"><SlidersHorizontal size={19}/></div><div><h3>Library policy</h3><p>Local policy values for reference in this frontend</p></div></div><div className="form-two"><label className="field">Loan period (days)<input type="number" min="1" name="loanDays" value={settings.loanDays} onChange={change}/></label><label className="field">Maximum books per borrower<input type="number" min="1" name="maxBooks" value={settings.maxBooks} onChange={change}/></label><label className="field">Fine per overdue day (PHP)<input type="number" min="0" name="fineRate" value={settings.fineRate} onChange={change}/></label><label className="field">Reservation hold (days)<input type="number" min="1" name="reservationDays" value={settings.reservationDays} onChange={change}/></label></div><div className="info-strip compact">These values are stored in this browser only. The backend does not currently expose a settings API.</div></section><section className="panel settings-panel"><div className="settings-title"><div className="settings-icon"><Bell size={19}/></div><div><h3>Notifications</h3><p>Choose local interface notification preferences</p></div></div><label className="toggle-row"><span><strong>Email notifications</strong><small>Preference only; no email service is connected.</small></span><input type="checkbox" name="emailAlerts" checked={settings.emailAlerts} onChange={change}/></label></section><section className="panel settings-panel"><div className="settings-title"><div className="settings-icon"><ShieldCheck size={19}/></div><div><h3>Account & security</h3><p>Administrator access information</p></div></div><div className="info-strip compact">Authentication and role-based access are not currently provided by the submitted backend API. Protect the system before public deployment.</div></section><div className="settings-save"><span>{saved?"Settings saved in this browser.":"Changes are not saved until you click Save changes."}</span><button className="btn btn-primary"><Save size={16}/> Save changes</button></div></form></>;
+import { useState } from 'react';
+import { Save, RotateCcw, Download } from 'lucide-react';
+import { useLibrary } from '../context/LibraryContext';
+import { useAuth } from '../context/AuthContext';
+
+export default function Settings() {
+  const { settings, updateSettings, resetSampleData, addToast } = useLibrary();
+  const { user, updateProfile } = useAuth();
+
+  const [libForm, setLibForm] = useState(settings);
+  const [profileForm, setProfileForm] = useState({
+    name: user?.name || 'Admin User',
+    email: user?.email || 'admin@cmdlibrary.edu',
+    role: user?.role || 'Head Librarian',
+  });
+
+  const handleSaveSettings = (e) => {
+    e.preventDefault();
+    updateSettings({
+      ...libForm,
+      studentLoanDays: Number(libForm.studentLoanDays),
+      facultyLoanDays: Number(libForm.facultyLoanDays),
+      maxBooksPerStudent: Number(libForm.maxBooksPerStudent),
+      maxBooksPerFaculty: Number(libForm.maxBooksPerFaculty),
+      dailyFineRate: Number(libForm.dailyFineRate),
+      reservationHoldDays: Number(libForm.reservationHoldDays),
+    });
+  };
+
+  const handleSaveProfile = (e) => {
+    e.preventDefault();
+    updateProfile(profileForm);
+    addToast('Librarian account profile updated.');
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="page-header-row">
+        <div>
+          <h1 className="page-title">Settings</h1>
+          <p className="page-subtitle">
+            Configure library policies, circulation limits, and administrator preferences
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5">
+
+          <button type="button" onClick={resetSampleData} className="btn-secondary">
+            <RotateCcw size={15} />
+            <span>Reset Sample Data</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Library Profile & Policies */}
+        <form onSubmit={handleSaveSettings} className="cmd-card p-6 space-y-5">
+          <div>
+            <h2 className="text-[17px] font-bold text-[#111827]">
+              Library &amp; Circulation Policies
+            </h2>
+            <p className="text-[12.5px] text-[#6B7280] mt-0.5">
+              Defaults applied to new borrowing transactions and fines
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+                Library Name
+              </label>
+              <input
+                type="text"
+                value={libForm.libraryName}
+                onChange={(e) => setLibForm({ ...libForm, libraryName: e.target.value })}
+                className="w-full h-10 px-3.5 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] focus:outline-none focus:bg-white focus:border-[#158F50]"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+                  Institution Code
+                </label>
+                <input
+                  type="text"
+                  value={libForm.institutionCode}
+                  onChange={(e) => setLibForm({ ...libForm, institutionCode: e.target.value })}
+                  className="w-full h-10 px-3.5 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] font-mono-data focus:outline-none focus:bg-white focus:border-[#158F50]"
+                />
+              </div>
+              <div>
+                <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+                  Contact Email
+                </label>
+                <input
+                  type="email"
+                  value={libForm.contactEmail}
+                  onChange={(e) => setLibForm({ ...libForm, contactEmail: e.target.value })}
+                  className="w-full h-10 px-3.5 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] focus:outline-none focus:bg-white focus:border-[#158F50]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+                  Student Loan Days
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={libForm.studentLoanDays}
+                  onChange={(e) => setLibForm({ ...libForm, studentLoanDays: e.target.value })}
+                  className="w-full h-10 px-3.5 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] tabular-nums focus:outline-none focus:bg-white focus:border-[#158F50]"
+                />
+              </div>
+              <div>
+                <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+                  Faculty Loan Days
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={libForm.facultyLoanDays}
+                  onChange={(e) => setLibForm({ ...libForm, facultyLoanDays: e.target.value })}
+                  className="w-full h-10 px-3.5 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] tabular-nums focus:outline-none focus:bg-white focus:border-[#158F50]"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3.5">
+              <div>
+                <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+                  Daily Fine Rate ($)
+                </label>
+                <input
+                  type="number"
+                  min="0.25"
+                  step="0.25"
+                  value={libForm.dailyFineRate}
+                  onChange={(e) => setLibForm({ ...libForm, dailyFineRate: e.target.value })}
+                  className="w-full h-10 px-3.5 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] tabular-nums focus:outline-none focus:bg-white focus:border-[#158F50]"
+                />
+              </div>
+              <div>
+                <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+                  Reservation Hold (Days)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={libForm.reservationHoldDays}
+                  onChange={(e) =>
+                    setLibForm({ ...libForm, reservationHoldDays: e.target.value })
+                  }
+                  className="w-full h-10 px-3.5 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] tabular-nums focus:outline-none focus:bg-white focus:border-[#158F50]"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 space-y-2.5">
+              <label className="flex items-center gap-2.5 text-[13.5px] text-[#374151] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={libForm.emailNotifications}
+                  onChange={(e) =>
+                    setLibForm({ ...libForm, emailNotifications: e.target.checked })
+                  }
+                  className="w-4 h-4 accent-[#158F50]"
+                />
+                <span>Send automatic due-date email reminders</span>
+              </label>
+              <label className="flex items-center gap-2.5 text-[13.5px] text-[#374151] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={libForm.overdueAutoAlert}
+                  onChange={(e) =>
+                    setLibForm({ ...libForm, overdueAutoAlert: e.target.checked })
+                  }
+                  className="w-4 h-4 accent-[#158F50]"
+                />
+                <span>Highlight overdue loans in header notifications</span>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" className="btn-primary">
+            <Save size={15} />
+            <span>Save Library Settings</span>
+          </button>
+        </form>
+
+        {/* Account Settings */}
+        <form onSubmit={handleSaveProfile} className="cmd-card p-6 space-y-5 h-fit">
+          <div>
+            <h2 className="text-[17px] font-bold text-[#111827]">Account Profile</h2>
+            <p className="text-[12.5px] text-[#6B7280] mt-0.5">
+              Update your active librarian display name and role
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={profileForm.name}
+                onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                className="w-full h-10 px-3.5 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] focus:outline-none focus:bg-white focus:border-[#158F50]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+                Email Address
+              </label>
+              <input
+                type="email"
+                value={profileForm.email}
+                onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                className="w-full h-10 px-3.5 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] focus:outline-none focus:bg-white focus:border-[#158F50]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+                Role Title
+              </label>
+              <input
+                type="text"
+                value={profileForm.role}
+                onChange={(e) => setProfileForm({ ...profileForm, role: e.target.value })}
+                className="w-full h-10 px-3.5 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] focus:outline-none focus:bg-white focus:border-[#158F50]"
+              />
+            </div>
+          </div>
+
+          <button type="submit" className="btn-primary">
+            <Save size={15} />
+            <span>Update Account</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  );
 }

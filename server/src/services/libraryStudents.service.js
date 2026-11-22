@@ -1,14 +1,16 @@
-const studentRepository = require("../data/libraryStudents.repository");
+const registrarService = require("./registrar.service");
 
+// Get all students through the shared Registrar service
 const getStudents = async () => {
-    return await studentRepository.getAllStudents();
+    return await registrarService.getStudents();
 };
 
-const getStudent = async (studentId) => {
-    return await studentRepository.getStudentById(studentId);
+// Get one student through the shared Registrar service
+const getStudentById = async (studentId) => {
+    return await registrarService.getStudent(studentId);
 };
 
 module.exports = {
     getStudents,
-    getStudent
+    getStudentById
 };

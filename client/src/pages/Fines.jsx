@@ -1,23 +1,376 @@
-import { useEffect,useMemo,useState } from "react";
-import { Plus, CreditCard } from "lucide-react";
-import PageHeader from "../components/PageHeader";
-import DataTable from "../components/DataTable";
-import Modal from "../components/Modal";
-import Status from "../components/Status";
-import { finesApi,paymentsApi,loansApi } from "../api/services";
-import { money } from "../utils/format";
-export default function Fines(){
- const [rows,setRows]=useState([]),[payments,setPayments]=useState([]),[loans,setLoans]=useState([]),[loading,setLoading]=useState(true),[error,setError]=useState(""),[search,setSearch]=useState(""),[modal,setModal]=useState(""),[saving,setSaving]=useState(false),[message,setMessage]=useState("");
- const [fineForm,setFineForm]=useState({borrowerId:"",borrowerType:"STUDENT",loanId:"",amount:"",reason:"Overdue book"}),[payForm,setPayForm]=useState({fineId:"",borrowerId:"",borrowerType:"STUDENT",amount:"",paymentMethod:"CASH",paymentReference:""});
- const load=async()=>{setLoading(true);setError("");try{const [f,p,l]=await Promise.all([finesApi.list(),paymentsApi.list(),loansApi.list()]);setRows(f);setPayments(p);setLoans(l)}catch(e){setError(e.message)}finally{setLoading(false)}};
- useEffect(()=>{load()},[]);
- const filtered=useMemo(()=>rows.filter(r=>[r.fineId,r.borrowerId,r.borrowerType,r.loanId,r.reason,r.status].join(" ").toLowerCase().includes(search.toLowerCase())),[rows,search]);
- const createFine=async(e)=>{e.preventDefault();setSaving(true);setMessage("");try{await finesApi.create({...fineForm,amount:Number(fineForm.amount),loanId:fineForm.loanId||null});setModal("");await load()}catch(e){setMessage(e.message)}finally{setSaving(false)}};
- const openPay=(fine)=>{setPayForm({fineId:fine.fineId,borrowerId:fine.borrowerId,borrowerType:fine.borrowerType,amount:fine.amount,paymentMethod:"CASH",paymentReference:""});setMessage("");setModal("payment")};
- const pay=async(e)=>{e.preventDefault();setSaving(true);setMessage("");try{await paymentsApi.create({...payForm,amount:Number(payForm.amount)});setModal("");await load()}catch(e){setMessage(e.message)}finally{setSaving(false)}};
- const columns=[{key:"fineId",label:"FINE ID"},{key:"borrowerId",label:"BORROWER",render:r=><div className="primary-cell"><strong>{r.borrowerId}</strong><span>{r.borrowerType}</span></div>},{key:"loanId",label:"LOAN ID"},{key:"reason",label:"REASON"},{key:"amount",label:"AMOUNT",render:r=><strong>{money(r.amount)}</strong>},{key:"status",label:"STATUS",render:r=><Status value={r.status}/>},{key:"actions",label:"ACTIONS",render:r=>String(r.status).toUpperCase()==="PAID"?<span className="muted-text">Paid</span>:<button className="btn btn-light btn-sm" onClick={()=>openPay(r)}><CreditCard size={14}/> Record payment</button>}];
- return <><PageHeader title="Fines & Payments" description="Monitor outstanding fines and record payments through the Finance endpoint." action={<button className="btn btn-primary" onClick={()=>{setMessage("");setModal("fine")}}><Plus size={17}/> Add fine</button>}/><div className="mini-stats"><div><span>Total fines</span><strong>{rows.length}</strong></div><div><span>Outstanding</span><strong>{money(rows.filter(x=>String(x.status).toUpperCase()!=="PAID").reduce((n,x)=>n+Number(x.amount||0),0))}</strong></div><div><span>Payments recorded</span><strong>{payments.length}</strong></div></div><DataTable columns={columns} rows={filtered} loading={loading} error={error} onRetry={load} search={search} onSearch={setSearch} searchPlaceholder="Search fine, borrower, loan, reason..."/>
- <div className="panel payment-panel"><div className="panel-heading"><div><h3>Recent payment records</h3><p>Transactions returned by the Finance payments API</p></div></div>{payments.length===0?<p className="muted-text">No payment records found.</p>:<div className="payment-list">{payments.slice(-5).reverse().map(p=><div key={p.paymentId}><div><strong>{p.paymentId}</strong><span>{p.borrowerId} · {p.paymentMethod}</span></div><strong>{money(p.amount)}</strong><Status value={p.status}/></div>)}</div>}</div>
- {modal==="fine"&&<Modal title="Create fine" onClose={()=>setModal("")}><form className="form-stack" onSubmit={createFine}><label className="field">Borrower type<select value={fineForm.borrowerType} onChange={e=>setFineForm(p=>({...p,borrowerType:e.target.value}))}><option>STUDENT</option><option>FACULTY</option></select></label><label className="field">Borrower ID<input required value={fineForm.borrowerId} onChange={e=>setFineForm(p=>({...p,borrowerId:e.target.value}))} placeholder="Enter borrower ID"/></label><label className="field">Related loan ID (optional)<select value={fineForm.loanId} onChange={e=>setFineForm(p=>({...p,loanId:e.target.value}))}><option value="">No related loan</option>{loans.map(l=><option key={l.loanId} value={l.loanId}>{l.loanId} — {l.borrowerId}</option>)}</select></label><label className="field">Amount (PHP)<input required type="number" min="0.01" step="0.01" value={fineForm.amount} onChange={e=>setFineForm(p=>({...p,amount:e.target.value}))}/></label><label className="field">Reason<input required value={fineForm.reason} onChange={e=>setFineForm(p=>({...p,reason:e.target.value}))}/></label>{message&&<div className="form-error">{message}</div>}<div className="form-actions"><button type="button" className="btn btn-light" onClick={()=>setModal("")}>Cancel</button><button className="btn btn-primary" disabled={saving}>{saving?"Saving...":"Create fine"}</button></div></form></Modal>}
- {modal==="payment"&&<Modal title="Record fine payment" onClose={()=>setModal("")}><form className="form-stack" onSubmit={pay}><div className="payment-summary"><span>Fine {payForm.fineId}</span><strong>{money(payForm.amount)}</strong></div><label className="field">Payment method<select value={payForm.paymentMethod} onChange={e=>setPayForm(p=>({...p,paymentMethod:e.target.value}))}><option value="CASH">Cash</option><option value="GCASH">GCash</option><option value="BANK_TRANSFER">Bank transfer</option><option value="CARD">Card</option></select></label><label className="field">Payment reference (optional)<input value={payForm.paymentReference} onChange={e=>setPayForm(p=>({...p,paymentReference:e.target.value}))} placeholder="Reference number"/></label>{message&&<div className="form-error">{message}</div>}<div className="form-actions"><button type="button" className="btn btn-light" onClick={()=>setModal("")}>Cancel</button><button className="btn btn-primary" disabled={saving}>{saving?"Submitting...":"Confirm payment"}</button></div></form></Modal>}</>;
+import { useState, useMemo } from 'react';
+import {
+  Plus,
+  Trash2,
+  CheckCircle,
+  Ban,
+  PhilippinePeso,
+  AlertCircle,
+  CheckCircle2,
+  Receipt,
+} from 'lucide-react';
+import { useLibrary } from '../context/LibraryContext';
+import { useTableFilter } from '../hooks/useTableFilter';
+import { usePagination } from '../hooks/usePagination';
+import StatCard from '../components/common/StatCard';
+import TableToolbar from '../components/common/TableToolbar';
+import StatusBadge from '../components/common/StatusBadge';
+import Pagination from '../components/common/Pagination';
+import Modal from '../components/common/Modal';
+import DeleteConfirmModal from '../components/common/DeleteConfirmModal';
+
+export default function Fines() {
+  const { fines, students, faculty, books, addFine, updateFineStatus, deleteFine } =
+    useLibrary();
+
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(null);
+  const [error, setError] = useState('');
+
+  const allBorrowers = useMemo(
+    () => [
+      ...students.map((s) => ({ id: s.id, name: `${s.name} (Student)` })),
+      ...faculty.map((f) => ({ id: f.id, name: `${f.name} (Faculty)` })),
+    ],
+    [students, faculty]
+  );
+
+  const [form, setForm] = useState({
+    borrowerId: '',
+    bookTitle: '',
+    reason: 'Late Return',
+    daysLate: 1,
+    amount: 5.0,
+  });
+
+  const openModal = () => {
+    setError('');
+    setForm({
+      borrowerId: allBorrowers[0]?.id || '',
+      bookTitle: books[0]?.title || '',
+      reason: 'Late Return',
+      daysLate: 1,
+      amount: 5.0,
+    });
+    setModalOpen(true);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const studentMatch = students.find((s) => s.id === form.borrowerId);
+    const facultyMatch = faculty.find((f) => f.id === form.borrowerId);
+    const member = studentMatch || facultyMatch;
+    if (!member || Number(form.amount) <= 0) {
+      setError('Please select a borrower and enter a positive fine amount.');
+      return;
+    }
+    addFine({
+      borrowerId: member.id,
+      borrowerType: facultyMatch ? 'FACULTY' : 'STUDENT',
+      borrowerName: member.name,
+      bookTitle: form.bookTitle,
+      reason: form.reason.trim() || 'Library Penalty',
+      daysLate: Number(form.daysLate) || 0,
+      amount: Number(form.amount),
+      status: 'Unpaid',
+      assessedDate: new Date().toISOString().slice(0, 10),
+    });
+    setModalOpen(false);
+  };
+
+  const totalAssessed = fines.reduce((s, f) => s + Number(f.amount || 0), 0);
+  const totalPaid = fines
+    .filter((f) => f.status === 'Paid')
+    .reduce((s, f) => s + Number(f.amount || 0), 0);
+  const totalUnpaid = fines
+    .filter((f) => f.status === 'Unpaid')
+    .reduce((s, f) => s + Number(f.amount || 0), 0);
+  const totalWaived = fines
+    .filter((f) => f.status === 'Waived')
+    .reduce((s, f) => s + Number(f.amount || 0), 0);
+
+  const preFiltered = useMemo(() => {
+    return fines.filter((f) => statusFilter === 'All' || f.status === statusFilter);
+  }, [fines, statusFilter]);
+
+  const { search, setSearch, sortKey, setSortKey, filteredItems } = useTableFilter(
+    preFiltered,
+    ['id', 'borrowerName', 'bookTitle', 'reason']
+  );
+
+  const {
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    paginatedItems,
+    totalItems,
+    pageSize,
+  } = usePagination(filteredItems, 6);
+
+  return (
+    <div className="space-y-5">
+      <div className="page-header-row">
+        <div>
+          <h1 className="page-title">Fines</h1>
+          <p className="page-subtitle">Track overdue charges, collections, and waived penalties</p>
+        </div>
+        <button type="button" onClick={openModal} className="btn-primary">
+          <Plus size={16} />
+          <span>Assess Fine</span>
+        </button>
+      </div>
+
+      <div className="stat-grid-4">
+        <StatCard
+          icon={Receipt}
+          label="Total Assessed"
+          value={`₱${totalAssessed.toFixed(2)}`}
+          tone="blue"
+        />
+        <StatCard
+          icon={CheckCircle2}
+          label="Collected"
+          value={`₱${totalPaid.toFixed(2)}`}
+          tone="green"
+        />
+        <StatCard
+          icon={AlertCircle}
+          label="Unpaid Balance"
+          value={`₱${totalUnpaid.toFixed(2)}`}
+          tone="red"
+        />
+        <StatCard
+          icon={PhilippinePeso}
+          label="Waived"
+          value={`₱${totalWaived.toFixed(2)}`}
+          tone="amber"
+        />
+      </div>
+
+      <TableToolbar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search fines by borrower or book..."
+        filters={[
+          {
+            label: 'Status filter',
+            value: statusFilter,
+            onChange: setStatusFilter,
+            options: [
+              { value: 'All', label: 'All Statuses' },
+              { value: 'Unpaid', label: 'Unpaid' },
+              { value: 'Paid', label: 'Paid' },
+              { value: 'Waived', label: 'Waived' },
+            ],
+          },
+        ]}
+        sortOptions={[
+          { value: 'assessedDate', label: 'Assessed Date' },
+          { value: 'borrowerName', label: 'Borrower' },
+        ]}
+        sortKey={sortKey}
+        onSortChange={setSortKey}
+      />
+
+      <section className="cmd-card overflow-hidden">
+        <div className="px-6 py-4 flex items-center justify-between">
+          <h2 className="text-[16px] font-bold text-[#111827]">Fine Ledger</h2>
+          <span className="text-[12.5px] font-medium text-[#6B7280] tabular-nums">
+            {filteredItems.length} entries
+          </span>
+        </div>
+
+        <div className="table-scroll">
+          <table className="cmd-table">
+            <thead>
+              <tr>
+                <th>Fine ID</th>
+                <th>Borrower</th>
+                <th>Book Title</th>
+                <th>Reason</th>
+                <th className="text-right">Days Late</th>
+                <th className="text-right">Amount</th>
+                <th>Status</th>
+                <th className="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedItems.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="text-center py-10 text-[#6B7280]">
+                    No fine records match your filter.
+                  </td>
+                </tr>
+              ) : (
+                paginatedItems.map((fine) => (
+                  <tr key={fine.id}>
+                    <td className="font-mono-data text-[12.5px] font-semibold text-[#374151]">
+                      {fine.id}
+                    </td>
+                    <td className="font-semibold text-[#111827]">{fine.borrowerName}</td>
+                    <td className="max-w-[200px] truncate">{fine.bookTitle}</td>
+                    <td className="text-[#4B5563]">{fine.reason}</td>
+                    <td className="text-right tabular-nums">{fine.daysLate}</td>
+                    <td className="text-right tabular-nums font-bold">
+                      ₱{Number(fine.amount).toFixed(2)}
+                    </td>
+                    <td>
+                      <StatusBadge status={fine.status} />
+                    </td>
+                    <td className="text-right">
+                      <div className="inline-flex items-center justify-end gap-1">
+                        {fine.status === 'Unpaid' && (
+                          <>
+                            <button
+                              type="button"
+                              title="Mark as Paid"
+                              onClick={() => updateFineStatus(fine.id, 'Paid')}
+                              className="p-1.5 rounded-md text-[#158F50] hover:bg-[#E7F6EE]"
+                            >
+                              <CheckCircle size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              title="Waive Fine"
+                              onClick={() => updateFineStatus(fine.id, 'Waived')}
+                              className="p-1.5 rounded-md text-[#6B7280] hover:bg-[#F3F6F4]"
+                            >
+                              <Ban size={16} />
+                            </button>
+                          </>
+                        )}
+                        <button
+                          type="button"
+                          aria-label={`Delete ${fine.id}`}
+                          onClick={() => setDeleting(fine)}
+                          className="p-1.5 rounded-md text-[#DC2626] hover:bg-[#FEE2E2]"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
+      </section>
+
+      <Modal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title="Assess Library Fine"
+        maxWidth="450px"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (
+            <div className="px-3.5 py-2.5 rounded-lg bg-[#FEE2E2] text-[#DC2626] text-[13px] font-medium">
+              {error}
+            </div>
+          )}
+          <div>
+            <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+              Borrower
+            </label>
+            <select
+              value={form.borrowerId}
+              onChange={(e) => setForm({ ...form, borrowerId: e.target.value })}
+              className="w-full h-10 px-3 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] focus:outline-none focus:bg-white focus:border-[#158F50]"
+            >
+              {allBorrowers.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+              Book Title
+            </label>
+            <select
+              value={form.bookTitle}
+              onChange={(e) => setForm({ ...form, bookTitle: e.target.value })}
+              className="w-full h-10 px-3 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] focus:outline-none focus:bg-white focus:border-[#158F50]"
+            >
+              {books.map((b) => (
+                <option key={b.id} value={b.title}>
+                  {b.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+              Reason
+            </label>
+            <input
+              type="text"
+              value={form.reason}
+              onChange={(e) => setForm({ ...form, reason: e.target.value })}
+              className="w-full h-10 px-3 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] focus:outline-none focus:bg-white focus:border-[#158F50]"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+                Days Late
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={form.daysLate}
+                onChange={(e) => setForm({ ...form, daysLate: e.target.value })}
+                className="w-full h-10 px-3 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] tabular-nums focus:outline-none focus:bg-white focus:border-[#158F50]"
+              />
+            </div>
+            <div>
+              <label className="block text-[12.5px] font-semibold text-[#374151] mb-1.5">
+                Amount (₱)
+              </label>
+              <input
+                type="number"
+                min="0.5"
+                step="0.5"
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                className="w-full h-10 px-3 rounded-lg border border-[#E1E7E3] bg-[#F6F8F7] text-[13.5px] tabular-nums focus:outline-none focus:bg-white focus:border-[#158F50]"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-3 pt-2">
+            <button type="submit" className="btn-primary flex-1">
+              Save Fine
+            </button>
+            <button
+              type="button"
+              onClick={() => setModalOpen(false)}
+              className="btn-secondary flex-1"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <DeleteConfirmModal
+        isOpen={Boolean(deleting)}
+        onClose={() => setDeleting(null)}
+        itemName={deleting ? `${deleting.borrowerName} (₱${deleting.amount})` : ''}
+        onConfirm={() => {
+          if (deleting) deleteFine(deleting.id);
+        }}
+      />
+    </div>
+  );
 }
