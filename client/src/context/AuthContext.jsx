@@ -1,15 +1,4 @@
-
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from 'react';
-
-import api from '../services/api';
-
 import { createContext, useContext, useState } from 'react';
-
 
 const AuthContext = createContext(null);
 
@@ -29,10 +18,15 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+
       if (stored === 'null') return null;
       if (stored) return JSON.parse(stored);
 
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(DEFAULT_ADMIN));
+      localStorage.setItem(
+        AUTH_STORAGE_KEY,
+        JSON.stringify(DEFAULT_ADMIN)
+      );
+
       return DEFAULT_ADMIN;
     } catch {
       return DEFAULT_ADMIN;
@@ -41,11 +35,17 @@ export function AuthProvider({ children }) {
 
   const login = ({ email, password, rememberMe = true }) => {
     if (!email || !password) {
-      return { ok: false, error: 'Please enter both email address and password.' };
+      return {
+        ok: false,
+        error: 'Please enter both email address and password.',
+      };
     }
 
     if (password.length < 4) {
-      return { ok: false, error: 'Password must be at least 4 characters.' };
+      return {
+        ok: false,
+        error: 'Password must be at least 4 characters.',
+      };
     }
 
     let registered = [];
@@ -65,7 +65,10 @@ export function AuthProvider({ children }) {
     );
 
     if (matched && matched.password !== password) {
-      return { ok: false, error: 'Incorrect password for this account.' };
+      return {
+        ok: false,
+        error: 'Incorrect password for this account.',
+      };
     }
 
     const isAdmin =
@@ -108,7 +111,10 @@ export function AuthProvider({ children }) {
 
   const register = ({ name, email, password }) => {
     if (!name || !email || !password) {
-      return { ok: false, error: 'All fields are required.' };
+      return {
+        ok: false,
+        error: 'All fields are required.',
+      };
     }
 
     let registered = [];
@@ -156,6 +162,7 @@ export function AuthProvider({ children }) {
     };
 
     setUser(sessionUser);
+
     localStorage.setItem(
       AUTH_STORAGE_KEY,
       JSON.stringify(sessionUser)
@@ -173,6 +180,7 @@ export function AuthProvider({ children }) {
     if (!user) return;
 
     const updated = { ...user, ...updates };
+
     setUser(updated);
 
     localStorage.setItem(
@@ -186,7 +194,6 @@ export function AuthProvider({ children }) {
       value={{
         user,
         isAuthenticated: Boolean(user),
-        authLoading,
         login,
         register,
         logout,
@@ -207,3 +214,5 @@ export function useAuth() {
 
   return ctx;
 }
+
+
