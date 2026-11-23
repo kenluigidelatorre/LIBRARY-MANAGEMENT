@@ -16,12 +16,20 @@ const errorHandler = require("./middleware/errorHandler");
 
 // Routes
 const bookRoutes = require("./routes/books.routes");
+const libraryStudentsRoutes = require("./routes/libraryStudents.routes");
 const libraryFacultyRoutes = require("./routes/libraryFaculty.routes");
+const registrarRoutes = require("./routes/registrar.routes");
 const loanRoutes = require("./routes/loans.routes");
 const reservationRoutes = require("./routes/reservations.routes");
 const fineRoutes = require("./routes/fines.routes");
 const financePaymentRoutes = require("./routes/financePayments.routes");
 const authRoutes = require("./routes/auth.routes");
+
+// OpenAPI documentation
+const openapiPath = path.join(__dirname, "../openapi.yaml");
+const openapiDocument = yaml.parse(
+    fs.readFileSync(openapiPath, "utf8")
+);
 
 const app = express();
 
@@ -90,10 +98,7 @@ app.use(notFound);
 // Global error handler - must be last
 app.use(errorHandler);
 
-// =====================================
 // SERVER
-// =====================================
-
 const PORT = Number(process.env.PORT || 5000);
 
 if (require.main === module) {
@@ -112,4 +117,4 @@ if (require.main === module) {
     });
 }
 
-startServer();
+module.exports = app;
