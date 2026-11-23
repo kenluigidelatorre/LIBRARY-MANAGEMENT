@@ -58,7 +58,7 @@ export default function Register() {
             Create an Account
           </h1>
           <p className="text-[13px] text-[#6B7280] mt-1">
-            Register staff access for CMD Library MS
+            Register Account
           </p>
         </div>
 
