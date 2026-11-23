@@ -1,3 +1,4 @@
+
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import MainLayout from '../components/layout/MainLayout';
@@ -14,12 +15,30 @@ import Reservations from '../pages/Reservations';
 import Fines from '../pages/Fines';
 import Reports from '../pages/Reports';
 import Settings from '../pages/Settings';
+import StaffManagement from '../pages/StaffManagement';
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth();
+
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
+
+  return children;
+}
+
+function AdminRoute({ children }) {
+  const { user } = useAuth();
+
+  const isAdmin =
+    user?.roleCode === 'ADMIN' ||
+    user?.role === 'Head Librarian' ||
+    user?.role === 'ADMIN';
+
+  if (!isAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   return children;
 }
 
@@ -49,9 +68,21 @@ export default function AppRoutes() {
         <Route path="fines" element={<Fines />} />
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />
+
+        <Route
+          path="staff-management"
+          element={
+            <AdminRoute>
+              <StaffManagement />
+            </AdminRoute>
+          }
+        />
       </Route>
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route
+        path="*"
+        element={<Navigate to="/dashboard" replace />}
+      />
     </Routes>
   );
 }
