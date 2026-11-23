@@ -1,9 +1,12 @@
 
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+
 import MainLayout from '../components/layout/MainLayout';
+
 import Login from '../pages/auth/Login';
 import Register from '../pages/auth/Register';
+
 import Dashboard from '../pages/Dashboard';
 import Students from '../pages/Students';
 import Faculty from '../pages/Faculty';
@@ -17,25 +20,18 @@ import Reports from '../pages/Reports';
 import Settings from '../pages/Settings';
 import StaffManagement from '../pages/StaffManagement';
 
-function ProtectedRoute({ children }) {
-  const { isAuthenticated } = useAuth();
+function ProtectedRoute({ children, requiredRole }) {
+  const { isAuthenticated, authLoading, user } = useAuth();
+
+  if (authLoading) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  return children;
-}
-
-function AdminRoute({ children }) {
-  const { user } = useAuth();
-
-  const isAdmin =
-    user?.roleCode === 'ADMIN' ||
-    user?.role === 'Head Librarian' ||
-    user?.role === 'ADMIN';
-
-  if (!isAdmin) {
+  if (requiredRole && user?.roleCode !== requiredRole) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -45,9 +41,11 @@ function AdminRoute({ children }) {
 export default function AppRoutes() {
   return (
     <Routes>
+      {/* Public Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
+      {/* Protected Routes */}
       <Route
         path="/"
         element={
@@ -56,7 +54,11 @@ export default function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route
+          index
+          element={<Navigate to="/dashboard" replace />}
+        />
+
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="students" element={<Students />} />
         <Route path="faculty" element={<Faculty />} />
@@ -69,16 +71,18 @@ export default function AppRoutes() {
         <Route path="reports" element={<Reports />} />
         <Route path="settings" element={<Settings />} />
 
+        {/* ADMIN Only */}
         <Route
           path="staff-management"
           element={
-            <AdminRoute>
+            <ProtectedRoute requiredRole="ADMIN">
               <StaffManagement />
-            </AdminRoute>
+            </ProtectedRoute>
           }
         />
       </Route>
 
+      {/* Fallback Route */}
       <Route
         path="*"
         element={<Navigate to="/dashboard" replace />}

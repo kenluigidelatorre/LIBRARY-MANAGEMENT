@@ -20,9 +20,7 @@ const libraryFacultyRoutes = require("./routes/libraryFaculty.routes");
 const loanRoutes = require("./routes/loans.routes");
 const reservationRoutes = require("./routes/reservations.routes");
 const fineRoutes = require("./routes/fines.routes");
-const registrarRoutes = require("./routes/registrar.routes");
-const financePaymentsRoutes = require("./routes/financePayments.routes");
-const libraryStudentsRoutes = require("./routes/libraryStudents.routes");
+const financePaymentRoutes = require("./routes/financePayments.routes");
 const authRoutes = require("./routes/auth.routes");
 
 const app = express();
@@ -60,50 +58,7 @@ app.get("/", (req, res) => {
     });
 });
 
-// Health check
-app.get("/api/health", async (req, res, next) => {
-    try {
-        await pool.query("SELECT 1");
-
-        res.status(200).json({
-            status: "success",
-            service: "library-management-api",
-            database: "connected",
-            timestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        next(error);
-    }
-});
-
-// Swagger documentation
-const openapiPath = path.join(__dirname, "../openapi.yaml");
-const openapiDocument = yaml.parse(
-    fs.readFileSync(openapiPath, "utf8")
-);
-
-app.use(
-    "/docs",
-    swaggerUi.serve,
-    swaggerUi.setup(openapiDocument)
-);
-
-// =====================================
 // API ROUTES
-// =====================================
-
-// Existing API routes
-app.use("/api/books", bookRoutes);
-app.use("/api/library/faculty", libraryFacultyRoutes);
-app.use("/api/registrar", registrarRoutes);
-app.use("/api/finance/payments", financePaymentsRoutes);
-app.use("/api/loans", loanRoutes);
-app.use("/api/reservations", reservationRoutes);
-app.use("/api/fines", fineRoutes);
-app.use("/api/library/students", libraryStudentsRoutes);
-
-
-// API v1 routes
 app.use("/api/v1/books", bookRoutes);
 app.use("/api/v1/library/students", libraryStudentsRoutes);
 app.use("/api/v1/library/faculty", libraryFacultyRoutes);
@@ -111,10 +66,16 @@ app.use("/api/v1/registrar", registrarRoutes);
 app.use("/api/v1/loans", loanRoutes);
 app.use("/api/v1/reservations", reservationRoutes);
 app.use("/api/v1/fines", fineRoutes);
-app.use("/api/v1/finance/payments", financePaymentsRoutes);
+app.use("/api/v1/finance/payments", financePaymentRoutes);
+
+// AUTHENTICATION ROUTES
+app.use("/api/auth", authRoutes);
 app.use("/api/v1/auth", authRoutes);
 
-// API v1 health check
+// API DOCUMENTATION
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
+
+// HEALTH CHECK
 app.get("/api/v1/health", (req, res) => {
     res.status(200).json({
         status: "success",
@@ -151,4 +112,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = app;
+startServer();

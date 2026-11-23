@@ -1,4 +1,3 @@
-
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -65,7 +64,6 @@ export default function Sidebar({ isOpen, onClose, onLogout }) {
             onClick={onClose}
           >
             <BrandEmblem size={38} />
-
             <div className="min-w-0">
               <div className="sidebar-brand-title">IDS Colleges</div>
               <div className="sidebar-brand-subtitle">

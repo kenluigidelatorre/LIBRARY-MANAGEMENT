@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
@@ -14,22 +15,42 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (isSubmitting) return;
+
     setError('');
     setNotice('');
-    const res = login({ email, password, rememberMe });
-    if (!res.ok) {
-      setError(res.error);
-      return;
+    setIsSubmitting(true);
+
+    try {
+      const res = await login({
+        email,
+        password,
+        rememberMe,
+      });
+
+      if (!res.ok) {
+        setError(res.error);
+        return;
+      }
+
+      navigate('/dashboard');
+    } catch {
+      setError('Unable to sign in. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
-    navigate('/dashboard');
   };
 
   const handleForgotPassword = () => {
     setError('');
-    setNotice('Password reset instructions have been prepared for your institutional email.');
+    setNotice(
+      'Password reset is not available yet. Please contact your system administrator.'
+    );
   };
 
   return (
@@ -50,6 +71,7 @@ export default function Login() {
             {error}
           </div>
         )}
+
         {notice && (
           <div className="mb-4 px-3.5 py-2.5 rounded-lg bg-[#E7F6EE] text-[#15803D] text-[13px] font-medium">
             {notice}
@@ -68,6 +90,7 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email address"
               aria-label="Email address"
+              required
               className="w-full h-11 pl-10 pr-4 rounded-lg border border-[#E1E7E3] bg-[#F5F7F6] text-[13.5px] text-[#111827] placeholder:text-[#9CA3AF] focus:outline-none focus:bg-white focus:border-[#158F50] focus:ring-2 focus:ring-[#158F50]/15"
             />
           </div>
@@ -83,6 +106,7 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               aria-label="Password"
+              required
               className="w-full h-11 pl-10 pr-11 rounded-lg border border-[#E1E7E3] bg-[#F5F7F6] text-[13.5px] text-[#111827] placeholder:text-[#9CA3AF] focus:outline-none focus:bg-white focus:border-[#158F50] focus:ring-2 focus:ring-[#158F50]/15"
             />
             <button
@@ -105,6 +129,7 @@ export default function Login() {
               />
               <span>Remember me</span>
             </label>
+
             <button
               type="button"
               onClick={handleForgotPassword}
@@ -114,8 +139,12 @@ export default function Login() {
             </button>
           </div>
 
-          <button type="submit" className="btn-primary w-full h-11 text-[14px]">
-            Log in
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="btn-primary w-full h-11 text-[14px]"
+          >
+            {isSubmitting ? 'Signing in...' : 'Log in'}
           </button>
         </form>
 

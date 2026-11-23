@@ -1,12 +1,12 @@
+
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import BrandEmblem from '../../components/common/BrandEmblem';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Register() {
   const { register } = useAuth();
-  const navigate = useNavigate();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -17,36 +17,41 @@ export default function Register() {
   const [agreeTerms, setAgreeTerms] = useState(true);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
     if (!name.trim() || !email.trim() || !password || !confirmPassword) {
       setError('Please fill in all fields.');
       return;
     }
+
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError('Please enter a valid email address.');
       return;
     }
+
     if (password.length < 6) {
       setError('Password must be at least 6 characters.');
       return;
     }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
     }
+
     if (!agreeTerms) {
       setError('Please confirm your institutional account agreement.');
       return;
     }
 
-    const res = register({ name, email, password });
+    const res = await register({ name, email, password });
+
     if (!res.ok) {
       setError(res.error);
       return;
     }
-    navigate('/dashboard');
   };
 
   return (
