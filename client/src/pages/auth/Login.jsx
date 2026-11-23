@@ -62,7 +62,7 @@ export default function Login() {
             WELCOME BACK!
           </h1>
           <p className="text-[13px] text-[#6B7280] mt-1">
-            Sign in to CMD Library Management System
+            Sign in to Library Management System
           </p>
         </div>
 

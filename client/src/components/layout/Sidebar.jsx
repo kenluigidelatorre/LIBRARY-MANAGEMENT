@@ -74,7 +74,7 @@ export default function Sidebar({ isOpen, onClose, onLogout }) {
             <BrandEmblem size={38} />
 
             <div className="min-w-0">
-              <div className="sidebar-brand-title">CMD</div>
+              <div className="sidebar-brand-title">IDS Colleges</div>
               <div className="sidebar-brand-subtitle">
                 Library Management System
               </div>
