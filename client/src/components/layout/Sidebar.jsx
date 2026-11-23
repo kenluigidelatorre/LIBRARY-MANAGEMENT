@@ -1,4 +1,3 @@
-
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -12,11 +11,7 @@ import {
   BarChart3,
   Settings,
   LogOut,
-
   UserPlus,
-  X,
-} from 'lucide-react';
-
   X,
 } from 'lucide-react';
 
@@ -34,14 +29,12 @@ const NAV_ITEMS = [
   { to: '/fines', label: 'Fines', icon: CircleDollarSign },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/settings', label: 'Settings', icon: Settings },
-
   {
     to: '/staff-management',
     label: 'Staff Management',
     icon: UserPlus,
     adminOnly: true,
   },
-
 ];
 
 export default function Sidebar({ isOpen, onClose, onLogout }) {
@@ -60,7 +53,6 @@ export default function Sidebar({ isOpen, onClose, onLogout }) {
         aria-hidden="true"
       />
 
-
       <aside
         className={`sidebar ${isOpen ? 'open' : ''}`}
         aria-label="Main navigation"
@@ -72,27 +64,8 @@ export default function Sidebar({ isOpen, onClose, onLogout }) {
             onClick={onClose}
           >
             <BrandEmblem size={38} />
-
             <div className="min-w-0">
               <div className="sidebar-brand-title">IDS Colleges</div>
-              <div className="sidebar-brand-subtitle">
-                Library Management System
-              </div>
-            </div>
-          </NavLink>
-
-
-      <aside className={`sidebar ${isOpen ? 'open' : ''}`} aria-label="Main navigation">
-        <div className="flex items-center justify-between pr-3">
-          <NavLink
-            to="/dashboard"
-            className="sidebar-brand flex-1"
-            onClick={onClose}
-          >
-            <BrandEmblem size={38} />
-
-            <div className="min-w-0">
-              <div className="sidebar-brand-title">CMD</div>
               <div className="sidebar-brand-subtitle">
                 Library Management System
               </div>
@@ -110,26 +83,9 @@ export default function Sidebar({ isOpen, onClose, onLogout }) {
         </div>
 
         <nav className="sidebar-nav">
-
-          {NAV_ITEMS
-            .filter(
-              ({ adminOnly }) =>
-                !adminOnly || user?.roleCode === 'ADMIN'
-            )
-            .map(({ to, label, icon: Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                onClick={onClose}
-                className={({ isActive }) =>
-                  `sidebar-link ${isActive ? 'active' : ''}`
-                }
-              >
-                <Icon size={18} strokeWidth={2} />
-                <span>{label}</span>
-              </NavLink>
-            ))}
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+          {NAV_ITEMS.filter(
+            ({ adminOnly }) => !adminOnly || isAdmin
+          ).map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -142,7 +98,6 @@ export default function Sidebar({ isOpen, onClose, onLogout }) {
               <span>{label}</span>
             </NavLink>
           ))}
-
         </nav>
 
         <div className="sidebar-footer">
