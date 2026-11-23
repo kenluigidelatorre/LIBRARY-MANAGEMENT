@@ -1,179 +1,164 @@
-import { createContext, useContext, useState } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
+
+import api from '../services/api';
 
 const AuthContext = createContext(null);
-
 const AUTH_STORAGE_KEY = 'cmd_library_auth_user';
-const REGISTERED_USERS_KEY = 'cmd_library_registered_users';
 
-const DEFAULT_ADMIN = {
-  id: 'ADM-001',
-  name: 'Admin User',
-  email: 'admin@cmdlibrary.edu',
-  role: 'Head Librarian',
-  roleCode: 'ADMIN',
-  token: 'demo-session-token',
-};
+function readStoredUser() {
+  try {
+    const saved =
+      localStorage.getItem(AUTH_STORAGE_KEY) ||
+      sessionStorage.getItem(AUTH_STORAGE_KEY);
+
+    if (!saved || saved === 'null') return null;
+
+    const parsed = JSON.parse(saved);
+
+    if (!parsed?.token) return null;
+
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function clearStoredUser() {
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+  sessionStorage.removeItem(AUTH_STORAGE_KEY);
+}
+
+function saveStoredUser(user, rememberMe) {
+  clearStoredUser();
+
+  const storage = rememberMe ? localStorage : sessionStorage;
+
+  storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+}
+
+function mapBackendUser(user, token) {
+  const roleCode = String(user.role || '').toUpperCase();
+
+  return {
+    id: user.id,
+    name: user.fullName,
+    email: user.email,
+    role: roleCode === 'ADMIN'
+      ? 'Head Librarian'
+      : 'Library Staff',
+    roleCode,
+    token,
+  };
+}
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+  const [user, setUser] = useState(readStoredUser);
 
-      if (stored === 'null') return null;
-      if (stored) return JSON.parse(stored);
+  const [authLoading, setAuthLoading] = useState(
+    () => Boolean(readStoredUser()?.token)
+  );
 
-      localStorage.setItem(
-        AUTH_STORAGE_KEY,
-        JSON.stringify(DEFAULT_ADMIN)
-      );
-
-      return DEFAULT_ADMIN;
-    } catch {
-      return DEFAULT_ADMIN;
+  // Verify previously stored JWT with the backend.
+  useEffect(() => {
+    if (!user?.token) {
+      setAuthLoading(false);
+      return;
     }
-  });
 
-  const login = ({ email, password, rememberMe = true }) => {
-    if (!email || !password) {
+    let active = true;
+
+    const rememberMe = Boolean(
+      localStorage.getItem(AUTH_STORAGE_KEY)
+    );
+
+    api.get('/auth/me')
+      .then(({ data }) => {
+        if (!active) return;
+
+        const verifiedUser = mapBackendUser(
+          data.user,
+          user.token
+        );
+
+        setUser(verifiedUser);
+        saveStoredUser(verifiedUser, rememberMe);
+      })
+      .catch(() => {
+        if (!active) return;
+
+        clearStoredUser();
+        setUser(null);
+      })
+      .finally(() => {
+        if (active) setAuthLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Authenticate using the actual backend login endpoint.
+  const login = async ({
+    email,
+    password,
+    rememberMe = true,
+  }) => {
+    if (!email?.trim() || !password) {
       return {
         ok: false,
         error: 'Please enter both email address and password.',
       };
     }
 
-    if (password.length < 4) {
-      return {
-        ok: false,
-        error: 'Password must be at least 4 characters.',
-      };
-    }
-
-    let registered = [];
-
     try {
-      registered = JSON.parse(
-        localStorage.getItem(REGISTERED_USERS_KEY) || '[]'
-      );
-    } catch {
-      registered = [];
-    }
+      const { data } = await api.post('/auth/login', {
+        email: email.trim(),
+        password,
+      });
 
-    const normalizedEmail = email.trim().toLowerCase();
-
-    const matched = registered.find(
-      (u) => u.email.toLowerCase() === normalizedEmail
-    );
-
-    if (matched && matched.password !== password) {
-      return {
-        ok: false,
-        error: 'Incorrect password for this account.',
-      };
-    }
-
-    const isAdmin =
-      normalizedEmail === DEFAULT_ADMIN.email.toLowerCase() ||
-      matched?.roleCode === 'ADMIN';
-
-    const sessionUser = matched
-      ? {
-          id: matched.id,
-          name: matched.name,
-          email: matched.email,
-          role: matched.role || 'Librarian',
-          roleCode: matched.roleCode || 'STAFF',
-          token: 'session-' + Date.now(),
-        }
-      : {
-          id: DEFAULT_ADMIN.id,
-          name: email.includes('admin')
-            ? DEFAULT_ADMIN.name
-            : email.split('@')[0],
-          email: email.trim(),
-          role: isAdmin ? 'Head Librarian' : 'Library Staff',
-          roleCode: isAdmin ? 'ADMIN' : 'STAFF',
-          token: 'session-' + Date.now(),
+      if (!data.success || !data.token || !data.user) {
+        return {
+          ok: false,
+          error: 'Invalid login response from server.',
         };
+      }
 
-    setUser(sessionUser);
-
-    if (rememberMe) {
-      localStorage.setItem(
-        AUTH_STORAGE_KEY,
-        JSON.stringify(sessionUser)
+      const authenticatedUser = mapBackendUser(
+        data.user,
+        data.token
       );
-    } else {
-      localStorage.removeItem(AUTH_STORAGE_KEY);
-    }
 
-    return { ok: true, user: sessionUser };
-  };
+      saveStoredUser(authenticatedUser, rememberMe);
+      setUser(authenticatedUser);
 
-  const register = ({ name, email, password }) => {
-    if (!name || !email || !password) {
+      return {
+        ok: true,
+        user: authenticatedUser,
+      };
+    } catch (error) {
       return {
         ok: false,
-        error: 'All fields are required.',
+        error: error.message || 'Unable to sign in.',
       };
     }
-
-    let registered = [];
-
-    try {
-      registered = JSON.parse(
-        localStorage.getItem(REGISTERED_USERS_KEY) || '[]'
-      );
-    } catch {
-      registered = [];
-    }
-
-    if (
-      registered.some(
-        (u) => u.email.toLowerCase() === email.trim().toLowerCase()
-      )
-    ) {
-      return {
-        ok: false,
-        error: 'An account with this email already exists.',
-      };
-    }
-
-    const newUser = {
-      id: 'USR-' + Math.floor(100 + Math.random() * 900),
-      name: name.trim(),
-      email: email.trim(),
-      password,
-      role: 'Library Staff',
-      roleCode: 'STAFF',
-    };
-
-    localStorage.setItem(
-      REGISTERED_USERS_KEY,
-      JSON.stringify([...registered, newUser])
-    );
-
-    const sessionUser = {
-      id: newUser.id,
-      name: newUser.name,
-      email: newUser.email,
-      role: newUser.role,
-      roleCode: newUser.roleCode,
-      token: 'session-' + Date.now(),
-    };
-
-    setUser(sessionUser);
-
-    localStorage.setItem(
-      AUTH_STORAGE_KEY,
-      JSON.stringify(sessionUser)
-    );
-
-    return { ok: true, user: sessionUser };
   };
+
+  // Self-registration is unavailable because the backend
+  // currently has no public registration endpoint.
+  const register = async () => ({
+    ok: false,
+    error: 'Self-registration is currently unavailable. Please contact your system administrator.',
+  });
 
   const logout = () => {
+    clearStoredUser();
     setUser(null);
-    localStorage.setItem(AUTH_STORAGE_KEY, 'null');
   };
 
   const updateProfile = (updates) => {
@@ -183,17 +168,19 @@ export function AuthProvider({ children }) {
 
     setUser(updated);
 
-    localStorage.setItem(
-      AUTH_STORAGE_KEY,
-      JSON.stringify(updated)
+    const rememberMe = Boolean(
+      localStorage.getItem(AUTH_STORAGE_KEY)
     );
+
+    saveStoredUser(updated, rememberMe);
   };
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        isAuthenticated: Boolean(user),
+        authLoading,
+        isAuthenticated: Boolean(user?.token),
         login,
         register,
         logout,
@@ -214,5 +201,3 @@ export function useAuth() {
 
   return ctx;
 }
-
-

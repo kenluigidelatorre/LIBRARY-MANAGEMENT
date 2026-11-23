@@ -22,7 +22,7 @@ export default function StaffManagement() {
 
     try {
       const response = await api.get('/auth/staff');
-      setStaff(response.data.staff || []);
+     setStaff(response.data.data || []);
     } catch (err) {
       setError(err.message || 'Unable to load staff accounts.');
     } finally {
