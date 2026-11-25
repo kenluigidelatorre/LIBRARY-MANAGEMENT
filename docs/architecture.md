@@ -116,43 +116,227 @@ The default port is `5000`, configurable through the `PORT` environment variable
 
 The health endpoint currently returns `{"status":"ok"}`. This response should not be interpreted as a separate database health check.
 
-## 5. Frontend Structure and API Mapping
+## 5. Frontend Structure and API Integration
 
-The repository's `client/` directory currently contains only a README file. The frontend implementation and prototype screen source files are not included in this repository. Therefore, the table below maps the documented API capabilities to the corresponding functional UI areas; the exact screen names and screen-to-endpoint connections must be checked against the shared Figma prototype.
+### 5.1 Overview
 
-All paths in the table are relative to the API base URL `http://localhost:5000/api/v1`.
+The frontend is a React application built with Vite. It provides the user interface for the Library Management System, including dashboard analytics, book catalog management, student and faculty directories, borrowing, returns, reservations, fines, reports, and system settings.
 
-| Functional UI area | HTTP method | API endpoint | Purpose |
+The frontend communicates with the Express backend through Axios. Shared authentication and library data are managed using React Context.
+
+### 5.2 Technology Stack
+
+| Technology | Purpose |
+|---|---|
+| React | Builds the user interface using reusable components |
+| Vite | Frontend development server and build tool |
+| React Router | Handles client-side navigation and protected routes |
+| Axios | Sends HTTP requests to the backend API |
+| Lucide React | Provides interface icons |
+| Motion | Supports interface animations |
+| CSS | Defines global styles, layouts, variables, and responsive behavior |
+
+### 5.3 Frontend Structure
+
+The main frontend source directory is `client/src/`.
+
+```text
+client/
+|-- src/
+|   |-- assets/              # Frontend assets
+|   |-- components/          # Reusable interface components
+|   |   |-- books/
+|   |   |-- common/
+|   |   |-- dashboard/
+|   |   |-- faculty/
+|   |   |-- layout/
+|   |   `-- students/
+|   |-- context/
+|   |   |-- AuthContext.jsx
+|   |   `-- LibraryContext.jsx
+|   |-- hooks/               # Custom React hooks
+|   |-- pages/               # Application screens
+|   |   |-- auth/
+|   |   `-- ...
+|   |-- routes/
+|   |   `-- AppRoutes.jsx
+|   |-- services/
+|   |   |-- api.js
+|   |   |-- libraryApi.js
+|   |   `-- libraryService.js
+|   |-- styles/
+|   |-- App.jsx
+|   `-- main.jsx
+|-- .env.example
+|-- package.json
+`-- vite.config.ts
+```
+
+#### Main responsibilities
+
+- **Pages (`pages/`)**: Contains the application screens for the different library functions.
+- **Components (`components/`)**: Contains reusable interface elements such as modals, tables, pagination, status badges, and layout components.
+- **Context (`context/`)**: Manages shared authentication and library application state.
+- **Routes (`routes/`)**: Defines application navigation and access restrictions.
+- **Services (`services/`)**: Handles API communication, data transformation, and local settings storage.
+- **Styles (`styles/`)**: Contains global CSS variables, layout rules, and responsive styles.
+- **Entry point (`main.jsx`)**: Mounts the React application and imports the global stylesheets.
+- **Application component (`App.jsx`)**: Configures BrowserRouter, AuthProvider, LibraryProvider, and AppRoutes.
+
+### 5.4 Application Pages
+
+The current frontend contains the following page files:
+
+| Page | File | Purpose |
+|---|---|---|
+| Login | `pages/auth/Login.jsx` | Provides user login |
+| Register | `pages/auth/Register.jsx` | Displays the registration interface; self-registration is currently unavailable |
+| Dashboard | `pages/Dashboard.jsx` | Displays library dashboard information |
+| Books | `pages/Books.jsx` | Manages the book catalog |
+| Categories | `pages/Categories.jsx` | Manages catalog categories |
+| Students | `pages/Students.jsx` | Displays library student records |
+| Faculty | `pages/Faculty.jsx` | Displays library faculty records |
+| Borrowing | `pages/Borrowing.jsx` | Manages book loans |
+| Returns | `pages/Returns.jsx` | Displays and processes returned books |
+| Reservations | `pages/Reservations.jsx` | Manages book reservations |
+| Fines | `pages/Fines.jsx` | Manages library fines |
+| Reports | `pages/Reports.jsx` | Displays library reports |
+| Settings | `pages/Settings.jsx` | Manages library settings |
+| Staff Management | `pages/StaffManagement.jsx` | Provides staff management functions |
+
+### 5.5 Navigation and Route Protection
+
+The application uses React Router through `AppRoutes.jsx`.
+
+| Route | Access |
+|---|---|
+| `/login` | Public |
+| `/register` | Public |
+| `/dashboard` | Authenticated users |
+| `/students` | Authenticated users |
+| `/faculty` | Authenticated users |
+| `/books` | Authenticated users |
+| `/categories` | Authenticated users |
+| `/borrowing` | Authenticated users |
+| `/returns` | Authenticated users |
+| `/reservations` | Authenticated users |
+| `/fines` | Authenticated users |
+| `/reports` | Authenticated users |
+| `/settings` | Authenticated users |
+| `/staff-management` | Admin only |
+
+The root route (`/`) redirects to `/dashboard`.
+
+The `ProtectedRoute` component checks authentication before displaying protected pages. Unauthenticated users are redirected to `/login`. Users who do not have the required `ADMIN` role are redirected to `/dashboard` when accessing staff management.
+
+### 5.6 Authentication and Session Management
+
+Authentication is managed by `AuthContext.jsx` through the `AuthProvider`.
+
+The frontend uses the backend authentication endpoints:
+
+| HTTP method | Endpoint | Purpose |
+|---|---|---|
+| POST | `/auth/login` | Authenticates a user and obtains a JWT |
+| GET | `/auth/me` | Verifies the stored authentication token |
+
+The frontend stores authenticated user information and the JWT using the browser's `localStorage` or `sessionStorage`, depending on the Remember Me selection.
+
+The shared Axios client attaches the stored JWT as a Bearer token to API requests.
+
+Self-registration is currently unavailable through the frontend because the current backend integration does not expose a public registration endpoint.
+
+### 5.7 Frontend Services
+
+The frontend uses three service files:
+
+| File | Responsibility |
+|---|---|
+| `services/api.js` | Configures Axios, the API base URL, request headers, JWT attachment, and API error handling |
+| `services/libraryApi.js` | Handles library API requests and transforms backend records into frontend data formats |
+| `services/libraryService.js` | Loads, saves, and resets library settings using browser local storage |
+
+The default API base URL configured in `api.js` is:
+
+```text
+http://localhost:5000/api
+```
+
+This value can be overridden through the `VITE_API_BASE_URL` environment variable.
+
+### 5.8 Shared Library State
+
+`LibraryContext.jsx` provides shared library data and operations through `LibraryProvider` and the `useLibrary` hook.
+
+The context manages:
+
+- Books
+- Categories
+- Students
+- Faculty
+- Borrowing records
+- Returns
+- Reservations
+- Fines
+- Payments
+- Library settings
+- Loading and backend connection status
+- Notifications and global search
+
+On application startup, the context checks the backend health endpoint and attempts to load the library data.
+
+Some functions have specific implementation limitations:
+
+- Categories are derived from book records and managed in frontend state.
+- Returns are derived from loan records.
+- Student and faculty records are read-only in the current frontend integration.
+- Reservation status updates are not supported by the current API integration.
+- Fine payments are submitted through the Finance API.
+- Library settings are stored locally in the browser rather than through a backend settings endpoint.
+
+### 5.9 Frontend API Mapping
+
+The following table describes the endpoint paths currently called by `libraryApi.js`. These paths are relative to the configured Axios base URL.
+
+| Functional area | HTTP method | Endpoint path | Purpose |
 |---|---|---|---|
-| Book catalog | GET | `/books` | Retrieve books |
-| Book catalog | POST | `/books` | Create a book |
-| Book details or editing | GET | `/books/{bookId}` | Retrieve one book |
-| Book editing | PUT | `/books/{bookId}` | Update a book |
-| Book management | DELETE | `/books/{bookId}` | Delete a book |
-| Library student directory | GET | `/library/students` | Retrieve library student records |
-| Library student details | GET | `/library/students/{studentId}` | Retrieve one library student |
-| Library faculty directory | GET | `/library/faculty` | Retrieve library faculty records |
-| Library faculty details | GET | `/library/faculty/{facultyId}` | Retrieve one library faculty member |
-| Registrar student directory | GET | `/registrar/students` | Retrieve registrar student records |
-| Registrar student details | GET | `/registrar/students/{studentId}` | Retrieve one registrar student |
-| Loan management | GET | `/loans` | Retrieve loans, with supported filters |
-| Loan creation | POST | `/loans` | Create a loan |
-| Loan details or editing | GET | `/loans/{loanId}` | Retrieve one loan |
-| Loan editing | PUT | `/loans/{loanId}` | Update a loan |
-| Loan management | DELETE | `/loans/{loanId}` | Delete a loan |
-| Reservation management | GET | `/reservations` | Retrieve reservations |
-| Reservation creation | POST | `/reservations` | Create a reservation |
-| Reservation details | GET | `/reservations/{reservationId}` | Retrieve one reservation |
-| Reservation management | DELETE | `/reservations/{reservationId}` | Delete a reservation |
-| Fine management | GET | `/fines` | Retrieve fines |
-| Fine creation | POST | `/fines` | Create a fine |
-| Fine details or editing | GET | `/fines/{fineId}` | Retrieve one fine |
-| Fine editing | PUT | `/fines/{fineId}` | Update a fine |
-| Finance payment records | GET | `/finance/payments` | Retrieve payment records |
-| Payment creation | POST | `/finance/payments` | Create a payment record |
-| Payment details | GET | `/finance/payments/{paymentId}` | Retrieve one payment record |
+| Health check | GET | `/v1/health` | Checks backend availability |
+| Authentication | POST | `/auth/login` | Authenticates a user |
+| Authentication | GET | `/auth/me` | Verifies the current user |
+| Books | GET | `/books` | Retrieves book records |
+| Books | POST | `/books` | Creates a book record |
+| Books | PUT | `/books/{bookId}` | Updates a book record |
+| Books | DELETE | `/books/{bookId}` | Deletes a book record |
+| Students | GET | `/registrar/students` | Retrieves registrar student records |
+| Students | GET | `/library/students` | Fallback source for student records |
+| Faculty | GET | `/library/faculty` | Retrieves faculty records |
+| Loans | GET | `/loans` | Retrieves loan records |
+| Loans | POST | `/loans` | Creates a loan |
+| Loans | PUT | `/loans/{loanId}` | Updates a loan, including returns |
+| Loans | DELETE | `/loans/{loanId}` | Deletes a loan |
+| Reservations | GET | `/reservations` | Retrieves reservations |
+| Reservations | POST | `/reservations` | Creates a reservation |
+| Reservations | DELETE | `/reservations/{reservationId}` | Deletes a reservation |
+| Fines | GET | `/fines` | Retrieves fines |
+| Fines | POST | `/fines` | Creates a fine |
+| Fines | PUT | `/fines/{fineId}` | Updates fine status |
+| Finance | GET | `/finance/payments` | Retrieves payment records |
+| Finance | POST | `/finance/payments` | Processes a fine payment |
 
-The table reflects the operations declared in `server/openapi.yaml`. It describes backend capabilities, not proof that every listed operation is connected to a particular prototype screen. The final screen inventory should use the actual screen names from Figma and include only the endpoints each screen is designed to call.
+The endpoint paths above describe the frontend implementation. They must be checked against the backend routes and `server/openapi.yaml` before confirming that all integrations are operational.
+
+### 5.10 Integration Notes and Limitations
+
+The frontend and backend must use matching API base paths and endpoint definitions.
+
+The current Axios configuration uses `http://localhost:5000/api` by default. The health check adds `/v1/health`, while most library service requests use unversioned paths such as `/books` and `/loans`.
+
+The backend architecture and OpenAPI documentation describe versioned API paths under `/api/v1`. Therefore, the frontend and backend endpoint mappings require verification with the backend developer.
+
+The frontend also tracks backend availability through `LibraryContext.jsx`. When the health check or data-loading requests fail, the application marks the backend as disconnected and displays an appropriate notification when a server-dependent operation is attempted.
+
+Successful frontend startup does not by itself confirm successful backend connectivity or complete API integration.
+
 
 ## 6. API Conventions and Data Sources
 
